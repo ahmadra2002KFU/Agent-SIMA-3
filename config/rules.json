@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": 1,
+      "text": "All visualizations should use colorblind-friendly palettes and high contrast",
+      "category": "visualization",
+      "priority": 5,
+      "active": true,
+      "created_at": "2025-09-27T05:56:51.124455",
+      "updated_at": "2025-09-27T05:56:51.140246"
+    },
+    {
+      "id": 3,
+      "text": "Format currency values with appropriate symbols and commas",
+      "category": "formatting",
+      "priority": 1,
+      "active": true,
+      "created_at": "2025-09-27T05:56:51.128330"
+    },
+    {
+      "id": 4,
+      "text": "Always check for missing values and outliers before analysis",
+      "category": "analysis",
+      "priority": 3,
+      "active": true,
+      "created_at": "2025-09-27T05:56:51.129859"
+    },
+    {
+      "id": 5,
+      "text": "Use consistent font families across all charts",
+      "category": "visualization",
+      "priority": 2,
+      "active": true,
+      "created_at": "2025-09-27T05:56:51.131572"
+    },
+    {
+      "id": 6,
+      "text": "Always validate data types before analysis",
+      "category": "imported",
+      "priority": 1,
+      "active": true,
+      "created_at": "2025-09-27T05:56:51.142691"
+    },
+    {
+      "id": 7,
+      "text": "Check for duplicate records in datasets",
+      "category": "imported",
+      "priority": 1,
+      "active": true,
+      "created_at": "2025-09-27T05:56:51.143204"
+    },
+    {
+      "id": 8,
+      "text": "Document data cleaning steps performed",
+      "category": "imported",
+      "priority": 1,
+      "active": true,
+      "created_at": "2025-09-27T05:56:51.143602"
+    },
+    {
+      "id": 9,
+      "text": "Include proper axis labels and titles",
+      "category": "imported",
+      "priority": 1,
+      "active": true,
+      "created_at": "2025-09-27T05:56:51.143937"
+    },
+    {
+      "id": 10,
+      "text": "Use consistent color schemes across related charts",
+      "category": "imported",
+      "priority": 1,
+      "active": true,
+      "created_at": "2025-09-27T05:56:51.144280"
+    },
+    {
+      "id": 11,
+      "text": "Ensure plots are readable at different screen sizes",
+      "category": "imported",
+      "priority": 1,
+      "active": true,
+      "created_at": "2025-09-27T05:56:51.144662"
+    }
+  ]
+}

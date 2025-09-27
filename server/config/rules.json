@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": 1,
+      "text": "Use professional color schemes in all visualizations",
+      "category": "visualization",
+      "priority": 2,
+      "active": true,
+      "created_at": "2025-09-27T06:01:41.517156"
+    },
+    {
+      "id": 2,
+      "text": "Rule 1",
+      "category": "imported",
+      "priority": 1,
+      "active": true,
+      "created_at": "2025-09-27T06:03:13.198110"
+    },
+    {
+      "id": 3,
+      "text": "Rule 2",
+      "category": "imported",
+      "priority": 1,
+      "active": true,
+      "created_at": "2025-09-27T06:03:13.198924"
+    },
+    {
+      "id": 4,
+      "text": "Rule 3",
+      "category": "imported",
+      "priority": 1,
+      "active": true,
+      "created_at": "2025-09-27T06:03:13.199747"
+    },
+    {
+      "id": 5,
+      "text": "Use colorblind-friendly palettes in visualizations",
+      "category": "visualization",
+      "priority": 1,
+      "active": true,
+      "created_at": "2025-09-27T06:03:43.283133"
+    }
+  ]
+}

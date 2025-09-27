@@ -1,0 +1,41 @@
+Patient_ID,First_Name,Last_Name,Age,Gender,Nationality,Blood_Type,Department,Admission_Date,Quarter,Year,Revenue
+P001,Ahmed,Al-Rashid,45,Male,Saudi Arabia,O+,Cardiology,2024-01-15,Q1,2024,15000
+P002,Fatima,Al-Zahra,32,Female,Saudi Arabia,A+,Pediatrics,2024-01-16,Q1,2024,8000
+P003,John,Smith,28,Male,American,B+,Emergency,2024-01-17,Q1,2024,12000
+P004,Mohammed,Al-Otaibi,55,Male,Saudi Arabia,O+,Orthopedics,2024-01-18,Q1,2024,18000
+P005,Sarah,Johnson,41,Female,American,AB+,Neurology,2024-01-19,Q1,2024,22000
+P006,Abdullah,Al-Mansouri,67,Male,Saudi Arabia,A+,Geriatrics,2024-01-20,Q1,2024,14000
+P007,Aisha,Al-Harbi,29,Female,Saudi Arabia,O+,Obstetrics,2024-01-21,Q1,2024,16000
+P008,David,Brown,35,Male,American,B+,Surgery,2024-01-22,Q1,2024,25000
+P009,Nora,Al-Fahad,52,Female,Saudi Arabia,A+,Oncology,2024-01-23,Q1,2024,30000
+P010,Omar,Al-Saud,38,Male,Saudi Arabia,O+,Cardiology,2024-01-24,Q1,2024,17000
+P011,Lisa,Wilson,44,Female,American,AB+,Dermatology,2024-01-25,Q1,2024,9000
+P012,Khalid,Al-Ghamdi,31,Male,Saudi Arabia,B+,Urology,2024-01-26,Q1,2024,13000
+P013,Maria,Garcia,26,Female,Spanish,A+,Emergency,2024-01-27,Q1,2024,11000
+P014,Hassan,Al-Dosari,49,Male,Saudi Arabia,O+,Pulmonology,2024-01-28,Q1,2024,19000
+P015,Jennifer,Lee,33,Female,American,B+,Psychiatry,2024-01-29,Q1,2024,21000
+P016,Salman,Al-Mutairi,58,Male,Saudi Arabia,A+,Endocrinology,2024-01-30,Q1,2024,16000
+P017,Emma,Taylor,27,Female,British,O+,Gynecology,2024-02-01,Q1,2024,14000
+P018,Faisal,Al-Shehri,42,Male,Saudi Arabia,AB+,Gastroenterology,2024-02-02,Q1,2024,20000
+P019,Anna,Petrov,39,Female,Russian,B+,Rheumatology,2024-02-03,Q1,2024,18000
+P020,Yusuf,Al-Qahtani,36,Male,Saudi Arabia,O+,Cardiology,2024-02-04,Q1,2024,15000
+P021,Michael,Johnson,29,Male,American,A+,Emergency,2025-01-15,Q1,2025,16000
+P022,Noura,Al-Rashid,34,Female,Saudi Arabia,O+,Pediatrics,2025-01-16,Q1,2025,9000
+P023,Robert,Davis,47,Male,American,B+,Surgery,2025-01-17,Q1,2025,28000
+P024,Maryam,Al-Zahra,41,Female,Saudi Arabia,A+,Neurology,2025-01-18,Q1,2025,24000
+P025,James,Wilson,52,Male,American,AB+,Oncology,2025-01-19,Q1,2025,32000
+P026,Layla,Al-Harbi,28,Female,Saudi Arabia,O+,Obstetrics,2025-01-20,Q1,2025,17000
+P027,William,Brown,33,Male,American,B+,Orthopedics,2025-01-21,Q1,2025,19000
+P028,Huda,Al-Mansouri,45,Female,Saudi Arabia,A+,Geriatrics,2025-01-22,Q1,2025,15000
+P029,Christopher,Smith,38,Male,American,O+,Cardiology,2025-01-23,Q1,2025,18000
+P030,Reem,Al-Otaibi,31,Female,Saudi Arabia,AB+,Dermatology,2025-01-24,Q1,2025,10000
+P031,Daniel,Johnson,26,Male,American,B+,Emergency,2025-04-15,Q2,2025,18000
+P032,Amina,Al-Ghamdi,37,Female,Saudi Arabia,O+,Pediatrics,2025-04-16,Q2,2025,11000
+P033,Matthew,Davis,44,Male,American,A+,Surgery,2025-04-17,Q2,2025,30000
+P034,Fatima,Al-Dosari,39,Female,Saudi Arabia,B+,Neurology,2025-04-18,Q2,2025,26000
+P035,Andrew,Wilson,48,Male,American,AB+,Oncology,2025-04-19,Q2,2025,35000
+P036,Zahra,Al-Mutairi,32,Female,Saudi Arabia,O+,Obstetrics,2025-04-20,Q2,2025,19000
+P037,Joshua,Brown,35,Male,American,A+,Orthopedics,2025-04-21,Q2,2025,21000
+P038,Nadia,Al-Shehri,42,Female,Saudi Arabia,B+,Geriatrics,2025-04-22,Q2,2025,17000
+P039,Ryan,Smith,29,Male,American,O+,Cardiology,2025-04-23,Q2,2025,20000
+P040,Lina,Al-Qahtani,34,Female,Saudi Arabia,AB+,Dermatology,2025-04-24,Q2,2025,12000
