@@ -9,7 +9,7 @@ def test_plotly_visualizations():
     
     # Upload sample data
     print("1. Uploading sample data...")
-    upload_url = "http://127.0.0.1:8000/upload"
+    upload_url = "http://127.0.0.1:8010/upload"
     
     try:
         with open("sample_data.csv", "rb") as f:
@@ -134,7 +134,7 @@ dept_salary_bar = fig
             }
         ]
         
-        execute_url = "http://127.0.0.1:8000/execute-code"
+        execute_url = "http://127.0.0.1:8010/execute-code"
         
         for i, viz in enumerate(visualizations, 1):
             print(f"\n{i+1}. Testing {viz['name']}...")

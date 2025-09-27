@@ -353,11 +353,13 @@ No recent chats
 
         function displayVisualizations(results) {
           const vizContainer = containers.visualizations.querySelector('.viz-container');
+          vizContainer.innerHTML = '';
           let hasViz = false;
 
           // Look for Plotly figures in results
           Object.keys(results).forEach(key => {
-            if (key.includes('plotly_figure') && results[key].type === 'plotly_figure') {
+            const entry = results[key];
+            if (key.includes('plotly_figure') && entry.type === 'plotly_figure') {
               hasViz = true;
 
               // Create a div for this visualization
@@ -380,21 +382,46 @@ No recent chats
 
               vizContainer.appendChild(vizDiv);
 
-              // Render the Plotly figure
-              try {
-                const figData = JSON.parse(results[key].json);
-                Plotly.newPlot(plotDiv.id, figData.data, figData.layout, {
-                  responsive: true,
-                  displayModeBar: true,
-                  modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
-                  displaylogo: false
-                });
-              } catch (error) {
+              let figurePayload = entry.payload || null;
+
+              if (!figurePayload) {
+                const rawJson = entry.json;
+                if (typeof rawJson === 'string') {
+                  try {
+                    figurePayload = JSON.parse(rawJson);
+                  } catch (parseError) {
+                    console.error('Error parsing Plotly figure JSON:', parseError);
+                  }
+                } else if (rawJson) {
+                  figurePayload = rawJson;
+                }
+              }
+
+              if (!figurePayload) {
+                plotDiv.innerHTML = '<p class="text-red-500">Unable to display visualization</p>';
+                return;
+              }
+
+              const data = Array.isArray(figurePayload.data) ? figurePayload.data : [];
+              const layout = figurePayload.layout || {};
+              const frames = Array.isArray(figurePayload.frames) ? figurePayload.frames : [];
+
+              Plotly.newPlot(plotDiv, data, layout, {
+                responsive: true,
+                displayModeBar: true,
+                modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
+                displaylogo: false
+              }).then(createdPlot => {
+                if (frames.length) {
+                  Plotly.addFrames(createdPlot, frames);
+                }
+              }).catch(error => {
                 console.error('Error rendering Plotly figure:', error);
                 plotDiv.innerHTML = '<p class="text-red-500">Error rendering visualization</p>';
-              }
+              });
             }
           });
+
 
           // Show visualizations container if we have any
           if (hasViz) {

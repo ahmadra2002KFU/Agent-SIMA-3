@@ -392,6 +392,11 @@ async def ws_endpoint(ws: WebSocket) -> None:
                             "results": results
                         }
 
+                        # Add execution results to field_content for final response
+                        field_content["execution_results"] = execution_results
+                        if results:
+                            field_content["results"] = results
+
                         # Send execution status
                         status_msg = "Code executed successfully. " if success else f"Code execution failed: {output[:100]}... "
                         await ws.send_json({"event": "delta", "field": "result_commentary", "delta": status_msg})

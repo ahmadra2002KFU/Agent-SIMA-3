@@ -154,27 +154,100 @@ class CodeExecutor:
             namespace['df'] = dataframe.copy()  # Use a copy to prevent modification
 
         return namespace
+
+    def _serialize_plotly_figure(self, figure: Any) -> Dict[str, Any]:
+        """Serialize Plotly figures with JSON-friendly payloads."""
+        try:
+            figure_dict = figure.to_plotly_json()
+        except Exception:
+            figure_dict = figure.to_dict()
+
+        cleaned = self._normalize_plotly_json(figure_dict)
+
+        return {
+            'type': 'plotly_figure',
+            'json': json.dumps(cleaned),
+            'payload': cleaned,
+            'html': figure.to_html(include_plotlyjs='cdn')
+        }
+
+    def _normalize_plotly_json(self, obj: Any) -> Any:
+        if isinstance(obj, dict):
+            if 'dtype' in obj and 'bdata' in obj:
+                return self._decode_plotly_array(obj)
+            return {k: self._normalize_plotly_json(v) for k, v in obj.items()}
+        if isinstance(obj, np.ndarray):
+            return self._normalize_plotly_json(obj.tolist())
+        if isinstance(obj, (pd.Series, pd.Index)):
+            return self._normalize_plotly_json(obj.tolist())
+        if isinstance(obj, (list, tuple)):
+            return [self._normalize_plotly_json(item) for item in obj]
+        return self._coerce_plotly_scalar(obj)
+
+    def _decode_plotly_array(self, array_dict: Dict[str, Any]) -> Any:
+        dtype = array_dict.get('dtype')
+        bdata = array_dict.get('bdata')
+        if not dtype or not bdata:
+            return array_dict
+
+        try:
+            np_dtype = np.dtype(dtype)
+            raw = base64.b64decode(bdata)
+            array = np.frombuffer(raw, dtype=np_dtype)
+
+            shape = array_dict.get('shape')
+            if shape:
+                if isinstance(shape, str):
+                    shape = [int(part.strip()) for part in shape.split(',') if part.strip()]
+                elif isinstance(shape, (list, tuple)):
+                    shape = list(shape)
+                if shape:
+                    array = array.reshape(tuple(shape))
+
+            if np_dtype.kind == 'M':
+                vectorized = np.vectorize(lambda x: np.datetime_as_string(x, unit='auto'))
+                return vectorized(array).tolist()
+            if np_dtype.kind == 'm':
+                vectorized = np.vectorize(lambda x: str(x))
+                return vectorized(array).tolist()
+
+            return array.tolist()
+        except Exception:
+            return array_dict
+
+    def _coerce_plotly_scalar(self, value: Any) -> Any:
+        if isinstance(value, np.generic):
+            return value.item()
+        if isinstance(value, pd.Timestamp):
+            return value.isoformat()
+        if hasattr(value, 'isoformat'):
+            try:
+                return value.isoformat()
+            except Exception:
+                pass
+        return value
+
     
     def _extract_results(self, namespace: Dict[str, Any]) -> Dict[str, Any]:
         """Extract important results from the execution namespace."""
         results = {}
-        
-        # Look for common result variables
-        result_vars = ['result', 'output', 'fig', 'figure', 'plot', 'chart', 'summary', 'analysis']
-        
-        for var_name in result_vars:
-            if var_name in namespace:
-                value = namespace[var_name]
-                results[var_name] = self._serialize_value(value)
-        
-        # Look for any plotly figures
+        plotly_figures_found = set()
+
+        # Look for any plotly figures first (to avoid duplicates)
         for name, value in namespace.items():
             if hasattr(value, 'to_json') and hasattr(value, 'show'):  # Likely a plotly figure
-                results[f'plotly_figure_{name}'] = {
-                    'type': 'plotly_figure',
-                    'json': value.to_json(),
-                    'html': value.to_html(include_plotlyjs='cdn')
-                }
+                plotly_figures_found.add(name)
+                results[f'plotly_figure_{name}'] = self._serialize_plotly_figure(value)
+
+        # Look for common result variables (excluding already processed plotly figures)
+        result_vars = ['result', 'output', 'fig', 'figure', 'plot', 'chart', 'summary', 'analysis']
+
+        for var_name in result_vars:
+            if var_name in namespace and var_name not in plotly_figures_found:
+                value = namespace[var_name]
+                # Skip if this is a plotly figure (already processed above)
+                if not (hasattr(value, 'to_json') and hasattr(value, 'show')):
+                    results[var_name] = self._serialize_value(value)
         
         # Look for DataFrames
         for name, value in namespace.items():
@@ -217,11 +290,10 @@ class CodeExecutor:
                     'columns': list(value.columns),
                     'head': df_dict
                 }
-            elif hasattr(value, 'to_json'):  # Plotly figure
-                return {
-                    'type': 'plotly_figure',
-                    'json': value.to_json()
-                }
+            elif hasattr(value, 'to_json') and hasattr(value, 'show'):  # Plotly figure
+                return self._serialize_plotly_figure(value)
+            elif hasattr(value, 'to_json'):
+                return value.to_json()
             elif hasattr(value, 'tolist'):  # NumPy array
                 return [self._serialize_value(item) for item in value.tolist()]
             elif hasattr(value, 'isoformat'):  # Pandas Timestamp or datetime

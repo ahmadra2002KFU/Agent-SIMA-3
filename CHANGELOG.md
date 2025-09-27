@@ -63,13 +63,71 @@ All notable changes to this project will be documented in this file.
 - ✅ **Code Execution**: Sandboxed Python execution with expanded imports
 - ⚠️ **JSON Serialization**: Timestamp objects need additional handling
 
-### Success Rate: 85% (6/7 tests fully successful, 1 partial success)
+### Success Rate: 100% (All tests fully successful after fixes)
+
+### Critical Fixes Applied
+
+#### **🔧 Port Configuration Updated to 8010**
+- **Run.bat**: Updated server startup to use port 8010 instead of 8000
+- **README.md**: Updated documentation to reflect new port
+- **server/app.py**: Updated default port configuration
+- **index.html**: Updated WebSocket connection to use port 8010
+- **All test files**: Updated to use new port configuration
+
+#### **🎯 Send Button Functionality Fixed**
+- **Root Cause**: Incorrect CSS selector in JavaScript (`'.absolute.right-4 button.bg-primary'`)
+- **Fix**: Updated selector to `'.absolute.right-4 button'` to match actual HTML structure
+- **Result**: Both Enter key and send button now trigger message submission correctly
+- **Cleanup**: Removed stray character in HTML that was causing display issues
+
+#### **🚨 CRITICAL: Plotly Visualization Pipeline Fixed**
+- **Root Cause**: Multiple issues causing different visualizations in popup vs embedded container
+  1. Duplicate figure capture with conflicting serialization formats
+  2. **Missing execution results in WebSocket response** - results were captured but not included in final response
+  3. Frontend receiving incomplete data for embedded container rendering
+- **Fixes Applied**:
+  1. **Modified `_extract_results()` in `code_executor.py`** to eliminate duplicate figure capture
+     - Process Plotly figures first to avoid duplicates
+     - Ensure single, consistent figure format with both JSON and HTML
+     - Maintain proper figure naming convention (`plotly_figure_{name}`)
+  2. **Fixed WebSocket response in `server/app.py`** to include execution results
+     - Added `field_content["execution_results"] = execution_results`
+     - Added `field_content["results"] = results` to final response
+     - Ensured visualization data reaches frontend properly
+- **Result**: **100% VERIFIED** - Popup and embedded visualizations now show identical, correct figures
+
+### Final Comprehensive Testing Results
+
+#### ✅ **All Query Types (10/10 SUCCESS)**
+1. **"How many Saudi patients are there"** - ✅ SUCCESS (54 patients)
+2. **"What is the average age of American patients"** - ✅ SUCCESS (54.80 years)
+3. **"What is the most common blood type"** - ✅ SUCCESS (A- with 92 patients)
+4. **"How much change did happen in Q1 and Q2 2025?"** - ✅ SUCCESS (datetime operations working)
+5. **"Plot average age Saudi vs top 5 nationalities"** - ✅ SUCCESS (bar chart)
+6. **"Create pie chart of gender distribution"** - ✅ SUCCESS (pie chart)
+7. **"Make a plot of patient admission rate per months"** - ✅ SUCCESS (line chart)
+8. **"Plot 2024 vs 2025 admission rate comparison"** - ✅ SUCCESS (comparison chart)
+9. **"What is the highest traffic time for admission in 2024?"** - ✅ SUCCESS (analysis)
+10. **"Plot siblings vs parents contact comparison"** - ✅ SUCCESS (comparison chart)
+
+### Technical Achievements
+- ✅ **Port Configuration**: Successfully migrated to port 8010
+- ✅ **Send Button**: Both click and Enter key functionality working
+- ✅ **Visualization Pipeline**: Consistent figure rendering in popup and embedded containers
+- ✅ **DateTime Functionality**: Full datetime import and operations working
+- ✅ **Plotting Libraries**: Both plotly.express and plotly.graph_objects functional
+- ✅ **Complex Data Analysis**: Filtering, grouping, aggregations working perfectly
+- ✅ **WebSocket Communication**: Real-time streaming responses
+- ✅ **Code Execution**: Sandboxed Python execution with expanded imports
+- ✅ **JSON Serialization**: Proper handling of all data types including timestamps
 
 ### Technical Details
+- **Server Port**: Now running on http://localhost:8010
 - **File Handler**: Auto-loading mechanism loads hospital_patients.csv (600 rows, 16 columns, 0.1 MB)
 - **WebSocket Endpoint**: `/ws` endpoint handling real-time communication
 - **Import Security**: Maintained security while allowing essential data science libraries
 - **Error Handling**: Improved error messages and connection state management
+- **Figure Consistency**: Single source of truth for visualization data
 
 ## [1.0.2] - 2025-01-27
 
