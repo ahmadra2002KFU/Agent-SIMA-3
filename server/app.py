@@ -413,7 +413,8 @@ async def ws_endpoint(ws: WebSocket) -> None:
                             execution_results = {
                                 "success": success,
                                 "output": output,
-                                "results": results
+                                "results": results,
+                                "executed_code": field_content["generated_code"]  # Include the actual code that was executed
                             }
 
                             # Send execution status
@@ -424,7 +425,8 @@ async def ws_endpoint(ws: WebSocket) -> None:
                             execution_results = {
                                 "success": False,
                                 "output": f"Code execution error: {str(e)}",
-                                "results": None
+                                "results": None,
+                                "executed_code": field_content["generated_code"]  # Include the code even if execution failed
                             }
                             await ws.send_json({"event": "delta", "field": "result_commentary", "delta": f"Code execution failed: {str(e)[:100]}... "})
 
@@ -433,15 +435,98 @@ async def ws_endpoint(ws: WebSocket) -> None:
                         try:
                             # Safely serialize execution results for the prompt
                             serialized_results = json.dumps(execution_results, indent=2, default=str)
-                            commentary_prompt = f"Provide natural language interpretation of the following code execution results: {serialized_results}"
+
+                            # Identify the primary result for focused commentary
+                            primary_result = None
+                            primary_result_key = None
+                            if execution_results.get('results'):
+                                # Look for the main result variable in priority order
+                                for key in ['result', 'output', 'summary', 'analysis']:
+                                    if key in execution_results['results']:
+                                        primary_result = execution_results['results'][key]
+                                        primary_result_key = key
+                                        break
+
+                            # Create enhanced commentary prompt with original query context
+                            primary_result_section = ""
+                            if primary_result is not None:
+                                primary_result_section = f"""
+PRIMARY RESULT:
+The main calculation result is: {primary_result} (stored in variable '{primary_result_key}')
+
+"""
+
+                            commentary_prompt = f"""Analyze and interpret the following complete code execution context for the user's query:
+
+ORIGINAL USER QUERY: "{user_msg}"
+
+{primary_result_section}EXECUTED CODE:
+```python
+{execution_results.get('executed_code', 'No code available')}
+```
+
+EXECUTION RESULTS:
+{serialized_results}
+
+COMMENTARY INSTRUCTIONS:
+1. START with the primary result: Answer the user's original question directly
+2. EXPLAIN the methodology: Describe how the code achieved this result
+3. PROVIDE context: Add relevant insights about the analysis approach
+
+The primary result ({primary_result}) directly answers the user's query "{user_msg}". Focus your commentary on explaining this result in the context of what the user asked for."""
                         except Exception as e:
                             logger.error(f"Failed to serialize execution results: {str(e)}", exc_info=True)
-                            # Fallback to basic string representation
-                            commentary_prompt = f"Provide natural language interpretation of the following code execution results: {str(execution_results)}"
+                            # Fallback to basic string representation with primary result focus
+                            primary_result = None
+                            primary_result_key = None
+                            if execution_results.get('results'):
+                                for key in ['result', 'output', 'summary', 'analysis']:
+                                    if key in execution_results['results']:
+                                        primary_result = execution_results['results'][key]
+                                        primary_result_key = key
+                                        break
+
+                            primary_result_section = ""
+                            if primary_result is not None:
+                                primary_result_section = f"""
+PRIMARY RESULT:
+The main calculation result is: {primary_result} (stored in variable '{primary_result_key}')
+
+"""
+
+                            commentary_prompt = f"""Analyze and interpret the following code execution context for the user's query:
+
+ORIGINAL USER QUERY: "{user_msg}"
+
+{primary_result_section}EXECUTED CODE:
+```python
+{execution_results.get('executed_code', 'No code available')}
+```
+
+EXECUTION RESULTS:
+{str(execution_results)}
+
+COMMENTARY INSTRUCTIONS:
+1. START with the primary result: Answer the user's original question directly
+2. EXPLAIN the methodology: Describe how the code achieved this result
+3. PROVIDE context: Add relevant insights about the analysis approach
+
+The primary result ({primary_result}) directly answers the user's query "{user_msg}". Focus your commentary on explaining this result in the context of what the user asked for."""
 
                         async for response_chunk in lm_client.generate_structured_response(
                             user_message=commentary_prompt,
-                            system_prompt="You are an expert data analyst. Interpret code execution results and provide clear, actionable insights. Be concise and factual.",
+                            system_prompt="""You are an expert data analyst. Interpret code execution results by answering the user's ORIGINAL QUERY first, using the primary result in the correct context.
+
+CRITICAL COMMENTARY STRUCTURE:
+1. **ANSWER THE ORIGINAL QUERY**: Use the primary result to directly answer what the user asked
+2. **METHODOLOGY EXPLANATION**: Explain how the code achieved this result
+3. **TECHNICAL DETAILS**: Reference specific functions, operations, or techniques used
+4. **CONTEXTUAL INSIGHTS**: Provide relevant additional insights
+
+EXAMPLE for "What is the average age of American patients?":
+"The average age of American patients is 54.8 years. The code calculated this by filtering for patients with 'American' nationality and using a custom age calculation function that computed age at admission by comparing Date_of_Birth with Admission_Date, accounting for whether the birthday had occurred yet in the admission year."
+
+CRITICAL: The primary result must be interpreted in the context of the original user query. If the user asks for "average age", the result represents age in years, not a percentage or count.""",
                             code_execution_results=execution_results,
                             user_rules=user_rules,
                             initial_response_temp=0.5,

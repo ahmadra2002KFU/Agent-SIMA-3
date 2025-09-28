@@ -177,13 +177,18 @@ COLUMN DETAILS:
         # Build code execution context if available
         execution_context = ""
         if code_execution_results:
+            executed_code = code_execution_results.get('executed_code', 'No code available')
             execution_context = f"""
-PREVIOUS CODE EXECUTION RESULTS:
+PREVIOUS CODE EXECUTION CONTEXT:
 - Status: {'Success' if code_execution_results.get('success', False) else 'Failed'}
-- Output: {code_execution_results.get('output', 'No output')}
-- Results: {json.dumps(code_execution_results.get('results', {}), indent=2) if code_execution_results.get('results') else 'No results'}
+- Executed Code:
+```python
+{executed_code}
+```
+- Console Output: {code_execution_results.get('output', 'No output')}
+- Captured Results: {json.dumps(code_execution_results.get('results', {}), indent=2) if code_execution_results.get('results') else 'No results'}
 
-Use these results to provide meaningful commentary and insights.
+Use this complete execution context (code + results) to provide meaningful commentary and insights.
 """
 
         # System message with structured response instructions
@@ -206,13 +211,14 @@ CRITICAL GUIDELINES FOR generated_code:
 CRITICAL GUIDELINES FOR result_commentary:
 - Start with the direct answer to the user's question
 - State exact numbers and percentages found
-- Mention the method used (e.g., "filtered Nationality column for 'Saudi'")
+- Explain the methodology used by referencing the executed code (e.g., "The code filtered the Nationality column using df['Nationality'].str.contains('Saudi')")
+- Mention specific pandas operations, functions, or techniques used
 - Keep additional insights brief and relevant
 - Avoid speculation, verbose analysis, or tangential observations
-- Focus on what the data actually shows, not what it might mean
+- Focus on what the data actually shows and how the code achieved those results
 
 EXAMPLE for "How many Saudi patients are there?":
-"The analysis found 12 Saudi patients out of 20 total patients (60%), based on filtering the Nationality column for entries containing 'Saudi'. The dataset shows patients from 8 different nationalities, with Saudi Arabia being the most common."
+"The analysis found 12 Saudi patients out of 20 total patients (60%). The code filtered the Nationality column using df['Nationality'].str.contains('Saudi', case=False, na=False) to identify all patients with Saudi nationality. The dataset shows patients from 8 different nationalities, with Saudi Arabia being the most common."
 
 User Rules: {user_rules or []}
 Available Tools: {available_tools or []}

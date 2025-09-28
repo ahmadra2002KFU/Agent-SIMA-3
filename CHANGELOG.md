@@ -2,6 +2,106 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.2] - 2025-01-28 - Query Context Enhancement (Critical Fix)
+
+### 🎯 Revolutionary Query Context Integration
+
+**BREAKTHROUGH**: Added original user query context to 3rd layer commentary, solving the critical result misinterpretation issue. The LLM now understands what the numerical results actually represent.
+
+### 🚨 Critical Issue Resolved
+
+**Problem**: LLM was misinterpreting numerical results due to lack of semantic context
+- Query: "What is the average age of American patients?"
+- Result: 54.8
+- **Wrong Commentary**: "The result value of 54.8 likely represents the percentage of patients..."
+- **Root Cause**: LLM didn't know 54.8 meant "age in years"
+
+**Solution**: Include original user query in commentary prompt for semantic context
+- **Correct Commentary**: "The average age of American patients is 54.8 years..."
+
+### 🔧 Technical Implementation
+
+- **Original Query Integration**: User query included in commentary prompt for context
+- **Semantic Context Provision**: LLM knows what the result represents based on the question asked
+- **Enhanced System Prompts**: Specific examples and warnings about result interpretation
+- **Query-Result Connection**: Explicit instruction to interpret results in context of original question
+
+## [2.1.1] - 2025-01-28 - Critical 3rd Layer Performance Fix
+
+### 🚨 Critical Performance Issue Resolution
+
+**FIXED**: Critical performance issue where the 3rd layer (Results Commentary) was not focusing on primary calculation results. The LLM was discussing demographics and intermediate steps instead of the main calculated outcomes.
+
+### 🎯 Primary Result Focus Enhancement
+
+- **Enhanced Commentary Prompts**: Added explicit PRIMARY RESULT identification and highlighting
+- **Structured Commentary Instructions**: Clear 3-step guidance (Primary Result → Methodology → Context)
+- **Result-Focused System Prompts**: Enhanced system prompts with specific examples and structure
+- **Priority-Based Result Capture**: Automatic identification of main result variables ('result', 'output', 'summary', 'analysis')
+
+### 📊 Performance Issue Example
+
+**Before Fix:**
+```
+Query: "What is the average age of American patients?"
+Commentary: "The analysis found 159 patients identified as American, which represents 54.8% of the total dataset..." (missing the actual age calculation)
+```
+
+**After Fix:**
+```
+Query: "What is the average age of American patients?"
+Commentary: "The analysis calculated the average age of American patients to be 31.67 years. The code used a custom age calculation function that computed age at admission by comparing Date_of_Birth with Admission_Date..."
+```
+
+### 🔧 Technical Improvements
+
+- **Primary Result Detection**: Automatic identification of the main calculation result
+- **Enhanced Prompt Structure**: Clear sections for PRIMARY RESULT, EXECUTED CODE, and EXECUTION RESULTS
+- **Commentary Instructions**: Explicit guidance for LLM to start with primary findings
+- **System Prompt Examples**: Specific examples for age calculation and other common scenarios
+
+## [2.1.0] - 2025-01-28 - Enhanced 3rd Layer Commentary
+
+### 🧠 Enhanced Results Commentary with Complete Execution Context
+
+This release significantly improves the 3rd layer (Results Commentary) by providing the LLM with complete visibility into the Layer 2 execution process. The LLM now receives both the executed code and the results, enabling more accurate, educational, and contextual commentary.
+
+### ✨ New Features
+
+- **Complete Execution Context**: LLM now receives the actual Python code that was executed alongside the results
+- **Enhanced Commentary Prompts**: Restructured prompts to include formatted code blocks for better LLM understanding
+- **Methodology Explanation**: Commentary now explains both what the code did (methodology) and what it found (outcomes)
+- **Educational Insights**: LLM references specific pandas operations, functions, and techniques used in the analysis
+
+### 🔧 Technical Improvements
+
+- **Enhanced `execution_results` Structure**: Added `executed_code` field to include the actual Python code
+- **Improved Commentary Prompt Format**: Structured prompts with separate sections for code and results
+- **Code-Aware System Prompts**: Updated system prompts to guide LLM in explaining both methodology and outcomes
+- **Error Context Enhancement**: Failed executions also include the attempted code for better debugging
+
+### 📈 Commentary Quality Improvements
+
+**Before Enhancement:**
+```
+"The analysis found 6 Saudi patients"
+```
+
+**After Enhancement:**
+```
+"The analysis found 6 Saudi patients. The code filtered the Nationality column using
+df['Nationality'].str.contains('Saudi', case=False, na=False) to identify all patients
+with Saudi nationality, ensuring case-insensitive matching and handling missing values."
+```
+
+### 🎯 Benefits
+
+- **Transparency**: Users understand both the results and how they were achieved
+- **Educational Value**: Commentary teaches users about pandas operations and data analysis techniques
+- **Debugging Support**: When code fails, users can see exactly what was attempted
+- **Methodology Validation**: Users can verify that the analysis approach was appropriate
+- **Learning Enhancement**: Commentary serves as a tutorial for data analysis techniques
+
 ## [2.0.0] - 2025-01-28 - New Robust Architecture
 
 ### 🚀 Major Architecture Overhaul
