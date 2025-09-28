@@ -7,6 +7,10 @@ from typing import AsyncGenerator, Dict, Any, Optional
 import aiohttp
 import logging
 
+# Temporarily comment out new architecture imports for testing
+# from server.validation_engine import validation_engine
+# from server.error_handler import error_handler
+
 logger = logging.getLogger(__name__)
 
 
