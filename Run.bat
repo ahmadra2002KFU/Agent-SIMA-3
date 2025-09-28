@@ -52,7 +52,11 @@ echo Press Ctrl+C to stop the server
 echo.
 
 REM Start the server and open browser
-start "" "http://localhost:8010"
+if "%1"=="--no-open" (
+    echo Skipping browser auto-open
+) else (
+    start "" "http://localhost:8010"
+)
 cd server
 uvicorn app:app --host 127.0.0.1 --port 8010
 

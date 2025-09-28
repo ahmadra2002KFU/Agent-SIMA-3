@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2025-09-28] - Plotting/Visualization fixes and duplicate tab mitigation
+
+### Fixed
+- Frontend: Updated Plotly CDN from `plotly-latest.min.js` (v1.58.5) to a fixed modern version `plotly-2.30.1.min.js` to match Plotly Python JSON output and prevent incorrect figure rendering
+- Frontend: Clear the visualization container before rendering new figures to avoid stale/duplicate plots in the container
+- Backend: Suppressed `fig.show()` side-effects by setting `plotly.io.renderers.default = 'json'` and patching `Figure.show` to a no-op inside the sandbox; this prevents unwanted new browser tabs for figures
+
+### Changed
+- Run.bat: Made auto-opening the browser optional; pass `--no-open` to skip opening a tab and avoid duplicate tabs when a tab is already open
+
+### Testing
+- Added a temporary unit test to assert that `fig.show()` no longer opens a browser and the figure is serialized correctly via CodeExecutor; test executed and then removed
+
 ## [2025-09-27] - Comprehensive Testing and Import Restrictions Fixed
 
 ### Fixed

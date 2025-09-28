@@ -10,6 +10,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.figure_factory as ff
+import plotly.io as pio
 from plotly.subplots import make_subplots
 import json
 import base64
@@ -39,7 +40,17 @@ class CodeExecutor:
             'json': json,
             'base64': base64
         }
-        
+
+        # Prevent Plotly from opening browser windows/tabs during code execution
+        try:
+            pio.renderers.default = 'json'
+            def _noop_show(*args, **kwargs):
+                return None
+            # Patch figure.show to no-op (covers fig.show())
+            go.Figure.show = _noop_show
+        except Exception:
+            pass
+
         # Built-in functions that are safe to use
         self.allowed_builtins = {
             'len', 'range', 'enumerate', 'zip', 'map', 'filter', 'sorted', 'sum',

@@ -2,14 +2,6 @@
   "version": 1,
   "rules": [
     {
-      "id": 1,
-      "text": "Use professional color schemes in all visualizations",
-      "category": "visualization",
-      "priority": 2,
-      "active": true,
-      "created_at": "2025-09-27T06:01:41.517156"
-    },
-    {
       "id": 2,
       "text": "Rule 1",
       "category": "imported",
@@ -34,12 +26,12 @@
       "created_at": "2025-09-27T06:03:13.199747"
     },
     {
-      "id": 5,
-      "text": "Use colorblind-friendly palettes in visualizations",
-      "category": "visualization",
+      "id": 4,
+      "text": "Use Blue and green in all plots",
+      "category": "general",
       "priority": 1,
       "active": true,
-      "created_at": "2025-09-27T06:03:43.283133"
+      "created_at": "2025-09-28T04:33:45.619897"
     }
   ]
 }

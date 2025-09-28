@@ -4,7 +4,7 @@
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>AI Sima - Chat with your data</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.30.1.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
 <script>
@@ -41,11 +41,64 @@
             'GRAD'0,
             'opsz'24
         }
+        
+        /* Prevent overlapping and ensure proper spacing */
+        @media (max-width: 768px) {
+            .flex.h-screen {
+                flex-direction: column;
+            }
+            
+            aside {
+                width: 100% !important;
+                height: auto;
+                border-right: none !important;
+                border-bottom: 1px solid rgb(229, 231, 235);
+            }
+            
+            .dark aside {
+                border-bottom-color: rgb(75, 85, 99);
+            }
+            
+            main {
+                height: calc(100vh - 200px);
+            }
+        }
+        
+        /* Ensure z-index layering */
+        .animate-ping {
+            z-index: 1;
+        }
+        
+        /* Prevent text overflow in containers */
+        pre {
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+        }
+        
+        /* Ensure proper spacing for dynamic content */
+        #chat-conversation-view > div {
+            margin-bottom: 1rem;
+        }
+        
+        /* Prevent button overlap in chat input */
+        #chat-input:focus {
+            z-index: 5;
+        }
+        
+        .viz-container > div {
+            margin-bottom: 1.5rem;
+        }
+        
+        /* Ensure dropdowns and modals appear above other content */
+        .relative {
+            isolation: isolate;
+        }
     </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark font-display text-text-light dark:text-text-dark transition-colors duration-300">
-<div class="flex h-screen">
-<aside class="w-72 bg-surface-light dark:bg-surface-dark p-6 flex flex-col justify-between shadow-lg">
+<div class="flex h-screen relative">
+<aside class="w-72 bg-surface-light dark:bg-surface-dark p-6 flex flex-col justify-between shadow-lg relative z-20 border-r border-gray-200 dark:border-gray-700">
 <div>
 <div class="flex items-center space-x-3 mb-6">
 <img alt="AI Sima Logo" class="h-10 w-10" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDuSNLNpEYFMZvVPOYUV4sj0KwCU1vUPANL83NjRSPupaOL2kXwecZ6r6-BUSVcfo4sPmZOKeGBek73nugAtAcg49yMCAAy76Y0_k3t_oAn_Aki-07BYeXmL0mGvr8BM0LirbrtDQoX6oj-SU2fLv4BXGV4-o_cZKTqcwwqKjK8PUOUO4CRkCny8xqD9-_4jvsjpOTYollB8AEgZB4kxMm5YlvSWciP_4JKVoR8x4Aw0AQ-D870c6rWDRdvskNixrs1szIMPFSWqg74"/>
@@ -82,7 +135,7 @@
                     Add
                 </button>
             </div>
-            <div id="rulesContainer" class="text-xs text-gray-500 dark:text-gray-400 space-y-2 max-h-32 overflow-y-auto">
+            <div id="rulesContainer" class="text-xs text-gray-500 dark:text-gray-400 space-y-2 max-h-32 overflow-y-auto relative z-10">
                 <p class="text-center">No custom rules defined</p>
             </div>
         </div>
@@ -114,17 +167,17 @@ No recent chats
 </div>
 </div>
 </aside>
-<main class="flex-1 flex flex-col">
-<header class="flex justify-end p-4">
-<div class="flex items-center space-x-2 bg-surface-light dark:bg-surface-dark px-3 py-2 rounded-lg shadow">
-<span class="relative flex h-3 w-3">
+<main class="flex-1 flex flex-col relative">
+<header class="flex justify-end p-4 relative z-30">
+<div class="flex items-center space-x-2 bg-surface-light dark:bg-surface-dark px-4 py-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600">
+<span class="relative flex h-3 w-3 z-10">
 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
 <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
 </span>
-<span class="text-sm font-medium text-gray-700 dark:text-gray-300">Model Connected</span>
+<span class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">Model Connected</span>
 </div>
 </header>
-<div class="flex-1 flex flex-col items-center justify-center text-center px-6 md:px-8 lg:px-12" id="chat-start-view">
+<div class="flex-1 flex flex-col items-center justify-center text-center px-6 md:px-8 lg:px-12 relative z-10" id="chat-start-view">
 <div class="p-6 bg-surface-light dark:bg-surface-dark rounded-full shadow-md mb-6">
 <img alt="AI Sima Logo" class="h-16 w-16" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrV3wMz1y8p1AO2MeFNOf4mDe7h5HhHexXmzsvTv422mkMDfY0qt0KV7ApXvXhV1WyEioGyl2I6NDN2wnuZzGkvhfyu8o7XEh9ijRojR9d1QCsBOWXeouL7_h7kOK1s-NkV5d4ivRoMry8QNJsawlu2rLlshRSYINwED3nX_c6GCfeDYTPF-RCunwAdWpiqudL_TgV1zJ2XwMar2sSLvr1gKuw_2Bszs0Cv_cUPdZRRBoR2kX8WyB7De2xeLsZ7r6uiqHaNyvU7Na0"/>
 </div>
@@ -151,22 +204,22 @@ No recent chats
 </div>
 </div>
 </div>
-<div class="hidden flex-1 overflow-y-auto pb-4" id="chat-conversation-view">
+<div class="hidden flex-1 overflow-y-auto pb-4 px-4 relative z-10" id="chat-conversation-view">
 </div>
-<div class="mt-auto p-6 md:p-8 lg:p-12 pt-4">
+<div class="mt-auto p-6 md:p-8 lg:p-12 pt-4 relative z-10">
 <div class="relative">
-<textarea class="w-full py-4 pl-14 pr-20 bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary focus:outline-none resize-none" id="chat-input" placeholder="Ask a question or upload a file..." rows="1"></textarea>
-<div class="absolute left-4 top-1/2 -translate-y-1/2">
-<button class="p-2 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-blue-300 transition-colors">
+<textarea class="w-full py-4 pl-16 pr-24 bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary focus:outline-none resize-none min-h-[56px]" id="chat-input" placeholder="Ask a question or upload a file..." rows="1"></textarea>
+<div class="absolute left-3 top-1/2 -translate-y-1/2 z-20">
+<button class="p-2 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-blue-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
 <label class="cursor-pointer" for="file-upload">
-<span class="material-symbols-outlined">attach_file</span>
+<span class="material-symbols-outlined text-xl">attach_file</span>
 </label>
 <input class="hidden" id="file-upload" type="file" accept=".csv,.xlsx,.xls"/>
 </button>
 </div>
-<div class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center space-x-2">
-<button class="bg-primary text-white w-10 h-10 rounded-lg flex items-center justify-center hover:bg-blue-800 transition-colors">
-<span class="material-symbols-outlined">send</span>
+<div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center space-x-2 z-20">
+<button id="send-btn" class="bg-primary text-white w-12 h-12 rounded-lg flex items-center justify-center hover:bg-blue-800 transition-colors shadow-md">
+<span class="material-symbols-outlined text-xl">send</span>
 </button>
 </div>
 </div>
@@ -178,7 +231,7 @@ No recent chats
         const startView = document.getElementById('chat-start-view');
         const convoView = document.getElementById('chat-conversation-view');
         const input = document.getElementById('chat-input');
-        const sendBtn = document.querySelector('.absolute.right-4 button');
+        const sendBtn = document.getElementById('send-btn');
         const fileInput = document.getElementById('file-upload');
         let ws = null;
         let containers = null;
@@ -202,17 +255,17 @@ No recent chats
                 };
 
                 // Style the containers
-                containers.initial_response.className = 'p-4 mb-3 bg-surface-light dark:bg-surface-dark rounded-xl';
-                containers.initial_response.innerHTML = '<h3 class="font-semibold mb-2 text-primary">Analysis</h3><pre class="whitespace-pre-wrap text-sm"></pre>';
+                containers.initial_response.className = 'p-4 mb-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-gray-700 relative z-10';
+                containers.initial_response.innerHTML = '<h3 class="font-semibold mb-2 text-primary">Analysis</h3><pre class="whitespace-pre-wrap text-sm leading-relaxed"></pre>';
 
-                containers.generated_code.className = 'p-4 mb-3 bg-surface-light dark:bg-surface-dark rounded-xl';
-                containers.generated_code.innerHTML = '<h3 class="font-semibold mb-2 text-primary">Generated Code</h3><pre class="whitespace-pre-wrap text-sm bg-gray-100 dark:bg-gray-800 p-3 rounded"></pre>';
+                containers.generated_code.className = 'p-4 mb-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-gray-700 relative z-10';
+                containers.generated_code.innerHTML = '<h3 class="font-semibold mb-2 text-primary">Generated Code</h3><pre class="whitespace-pre-wrap text-sm bg-gray-100 dark:bg-gray-800 p-3 rounded leading-relaxed overflow-x-auto"></pre>';
 
-                containers.result_commentary.className = 'p-4 mb-3 bg-surface-light dark:bg-surface-dark rounded-xl';
-                containers.result_commentary.innerHTML = '<h3 class="font-semibold mb-2 text-primary">Results & Commentary</h3><pre class="whitespace-pre-wrap text-sm"></pre>';
+                containers.result_commentary.className = 'p-4 mb-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-gray-700 relative z-10';
+                containers.result_commentary.innerHTML = '<h3 class="font-semibold mb-2 text-primary">Results & Commentary</h3><pre class="whitespace-pre-wrap text-sm leading-relaxed"></pre>';
 
-                containers.visualizations.className = 'p-4 mb-3 bg-surface-light dark:bg-surface-dark rounded-xl hidden';
-                containers.visualizations.innerHTML = '<h3 class="font-semibold mb-2 text-primary">Visualizations</h3><div class="viz-container"></div>';
+                containers.visualizations.className = 'p-4 mb-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-gray-700 relative z-10 hidden';
+                containers.visualizations.innerHTML = '<h3 class="font-semibold mb-2 text-primary">Visualizations</h3><div class="viz-container space-y-4"></div>';
 
                 convoView.appendChild(containers.initial_response);
                 convoView.appendChild(containers.generated_code);
@@ -281,10 +334,10 @@ No recent chats
 
           // Create user message container
           const userMessageDiv = document.createElement('div');
-          userMessageDiv.className = 'mb-4 flex justify-end';
+          userMessageDiv.className = 'mb-6 flex justify-end relative z-10';
           userMessageDiv.innerHTML = `
-            <div class="max-w-xs lg:max-w-md px-4 py-2 bg-primary text-white rounded-lg">
-              <p class="text-sm">${message}</p>
+            <div class="max-w-xs lg:max-w-md px-4 py-3 bg-primary text-white rounded-lg shadow-md">
+              <p class="text-sm leading-relaxed">${message}</p>
             </div>
           `;
 
@@ -353,6 +406,8 @@ No recent chats
 
         function displayVisualizations(results) {
           const vizContainer = containers.visualizations.querySelector('.viz-container');
+          // Clear previous visualizations to avoid stale/duplicate plots
+          vizContainer.innerHTML = '';
           let hasViz = false;
 
           // Look for Plotly figures in results
@@ -362,12 +417,12 @@ No recent chats
 
               // Create a div for this visualization
               const vizDiv = document.createElement('div');
-              vizDiv.className = 'mb-4 p-3 border border-gray-200 dark:border-gray-600 rounded';
+              vizDiv.className = 'mb-6 p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 relative z-10';
               vizDiv.id = 'plot_' + Math.random().toString(36).substr(2, 9);
 
               // Add title
               const title = document.createElement('h4');
-              title.className = 'text-sm font-medium mb-2 text-gray-700 dark:text-gray-300';
+              title.className = 'text-sm font-medium mb-3 text-gray-700 dark:text-gray-300';
               title.textContent = key.replace('plotly_figure_', '').replace('_', ' ').toUpperCase();
               vizDiv.appendChild(title);
 
@@ -376,6 +431,7 @@ No recent chats
               plotDiv.id = vizDiv.id + '_plot';
               plotDiv.style.width = '100%';
               plotDiv.style.height = '400px';
+              plotDiv.style.minHeight = '400px';
               vizDiv.appendChild(plotDiv);
 
               vizContainer.appendChild(vizDiv);
@@ -450,12 +506,12 @@ No recent chats
           }
 
           container.innerHTML = rules.map(rule => `
-            <div class="flex justify-between items-start p-2 bg-gray-100 dark:bg-gray-600 rounded">
-              <div class="flex-1">
-                <p class="text-xs">${rule.text}</p>
+            <div class="flex justify-between items-start p-2 bg-gray-100 dark:bg-gray-600 rounded mb-2 relative z-10">
+              <div class="flex-1 mr-2">
+                <p class="text-xs break-words">${rule.text}</p>
                 <span class="text-xs text-gray-400">${rule.category}</span>
               </div>
-              <button onclick="deleteRule(${rule.id})" class="ml-2 text-red-500 hover:text-red-700">
+              <button onclick="deleteRule(${rule.id})" class="ml-2 text-red-500 hover:text-red-700 flex-shrink-0 p-1 rounded hover:bg-red-100 dark:hover:bg-red-900 transition-colors">
                 <span class="material-symbols-outlined text-sm">delete</span>
               </button>
             </div>
