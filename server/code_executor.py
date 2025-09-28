@@ -190,11 +190,19 @@ class CodeExecutor:
         # Look for DataFrames
         for name, value in namespace.items():
             if isinstance(value, pd.DataFrame) and name != 'df':  # Exclude original df
+                # Convert DataFrame to dict with proper serialization
+                df_records = []
+                for _, row in value.head().iterrows():
+                    record = {}
+                    for col, val in row.items():
+                        record[col] = self._serialize_value(val)
+                    df_records.append(record)
+
                 results[f'dataframe_{name}'] = {
                     'type': 'dataframe',
                     'shape': value.shape,
                     'columns': list(value.columns),
-                    'head': value.head().to_dict('records'),
+                    'head': df_records,
                     'dtypes': {col: str(dtype) for col, dtype in value.dtypes.items()}
                 }
         
@@ -235,13 +243,27 @@ class CodeExecutor:
                 }
             elif hasattr(value, 'tolist'):  # NumPy array
                 return [self._serialize_value(item) for item in value.tolist()]
+            elif pd.isna(value):  # Handle pandas NaT and other pandas NA values
+                return None
             elif hasattr(value, 'isoformat'):  # Pandas Timestamp or datetime
-                return value.isoformat()
+                try:
+                    return value.isoformat()
+                except (ValueError, AttributeError):
+                    # Handle invalid timestamps or NaT values
+                    return None
             elif str(type(value)).startswith("<class 'pandas._libs.tslibs"):  # Pandas timestamp types
-                return str(value)
+                try:
+                    # Try to convert to string, but handle NaT values
+                    str_value = str(value)
+                    if str_value in ['NaT', 'NaN', 'nan']:
+                        return None
+                    return str_value
+                except Exception:
+                    return None
             else:
                 return str(value)
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to serialize value of type {type(value).__name__}: {e}")
             return f"<Unable to serialize {type(value).__name__}>"
     
     def validate_code(self, code: str) -> Tuple[bool, str]:

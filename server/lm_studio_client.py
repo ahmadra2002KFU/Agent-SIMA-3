@@ -191,8 +191,13 @@ Use these results to provide meaningful commentary and insights.
 
 You must respond in a structured JSON format with exactly three fields:
 1. "initial_response": Your initial analysis/understanding of the request
-2. "generated_code": Python code to execute (if applicable, otherwise empty string)
+2. "generated_code": Python code to execute (if applicable, otherwise empty string) - MUST assign final output to 'result', 'output', 'fig', or 'figure' variable
 3. "result_commentary": CONCISE, FACTUAL interpretation of results
+
+CRITICAL GUIDELINES FOR generated_code:
+- ALWAYS assign your final output to a variable named 'result' or 'output'
+- For visualizations, assign to 'fig' or 'figure'
+- Without this assignment, results won't be captured!
 
 CRITICAL GUIDELINES FOR result_commentary:
 - Start with the direct answer to the user's question
@@ -225,29 +230,127 @@ Respond ONLY with valid JSON in the exact format specified."""
         # The result_commentary field benefits from lower temperature to reduce hallucination
         temperature = result_commentary_temp  # Use the lowest temperature for overall precision
 
-        # Stream the response and parse it
+        # Stream the response and parse it incrementally for faster UX
         full_response = ""
+        # Track partial content extracted per field to emit only new data
+        partial_buffers: Dict[str, str] = {
+            "initial_response": "",
+            "generated_code": "",
+            "result_commentary": "",
+        }
+
+        def extract_partial(json_text: str, field: str) -> Optional[str]:
+            """Best-effort extraction of the (possibly partial) string value of a top-level JSON field.
+            Assumes the model is emitting a JSON object with string fields. Handles escaped quotes and
+            properly decodes JSON escape sequences like \\n, \\t, \\", etc. Returns the string content
+            without surrounding quotes if the field has started; returns None if the field key hasn't
+            appeared yet.
+            """
+            try:
+                key = f'"{field}"'
+                key_idx = json_text.find(key)
+                if key_idx == -1:
+                    return None
+
+                # Find the colon after the key
+                colon_idx = json_text.find(":", key_idx)
+                if colon_idx == -1:
+                    return None
+
+                # Find the opening quote for the string value
+                i = colon_idx + 1
+                # Skip whitespace
+                while i < len(json_text) and json_text[i] in " \t\r\n":
+                    i += 1
+                if i >= len(json_text) or json_text[i] != '"':
+                    return None
+
+                # Move past opening quote
+                i += 1
+                # Scan until we hit an unescaped closing quote or run out of text (partial)
+                # Keep escape sequences intact for proper JSON decoding
+                escaped = False
+                raw_chars = []
+                string_complete = False
+
+                while i < len(json_text):
+                    ch = json_text[i]
+                    raw_chars.append(ch)
+
+                    if escaped:
+                        escaped = False
+                    else:
+                        if ch == "\\":
+                            escaped = True
+                        elif ch == '"':
+                            # End of the string value
+                            string_complete = True
+                            raw_chars.pop()  # Remove the closing quote
+                            break
+                    i += 1
+
+                raw_content = "".join(raw_chars)
+
+                # If the string is complete, use JSON decoder for proper escape sequence handling
+                if string_complete:
+                    try:
+                        # Use json.loads to properly decode all escape sequences
+                        decoded = json.loads(f'"{raw_content}"')
+                        return decoded
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"JSON decode error for complete string in field '{field}': {e}")
+                        # If JSON decoding fails, return raw content but clean it up
+                        return raw_content.replace('\\n', '\n').replace('\\t', '\t').replace('\\"', '"')
+                else:
+                    # For partial strings, try to decode what we have, but fall back to raw if it fails
+                    try:
+                        # Try to decode the partial content
+                        decoded = json.loads(f'"{raw_content}"')
+                        return decoded
+                    except json.JSONDecodeError:
+                        # For partial strings that can't be decoded, return as-is
+                        # But do basic cleanup of common escape sequences
+                        cleaned = raw_content.replace('\\n', '\n').replace('\\t', '\t').replace('\\"', '"')
+                        return cleaned
+
+            except Exception as e:
+                logger.error(f"Error in extract_partial for field '{field}': {e}")
+                return None
+
         async for chunk in self.stream_completion(messages, temperature=temperature):
             full_response += chunk
 
-            # Try to parse partial JSON to extract fields
+            # Try to incrementally extract and stream each field's partial content
+            for fld in ["initial_response", "generated_code", "result_commentary"]:
+                try:
+                    partial = extract_partial(full_response, fld)
+                    if partial is None:
+                        continue
+                    prev = partial_buffers[fld]
+                    if len(partial) > len(prev):
+                        # Emit only the newly added portion
+                        delta = partial[len(prev):]
+                        partial_buffers[fld] = partial
+                        # Yield the cumulative content so far (server will compute delta)
+                        yield {"field": fld, "content": partial}
+                except Exception:
+                    # Best-effort; ignore parser errors and continue accumulating
+                    continue
+
+            # If the model appears to have finished a full JSON object, parse once to finalize
             try:
-                # Look for complete JSON structure
                 if full_response.strip().endswith("}"):
                     parsed = json.loads(full_response.strip())
-
-                    # Yield each field if it exists
                     for field in ["initial_response", "generated_code", "result_commentary"]:
                         if field in parsed:
+                            # Ensure final content is yielded at least once
                             yield {"field": field, "content": parsed[field]}
                     break
-
             except json.JSONDecodeError:
-                # Continue accumulating until we have valid JSON
-                continue
-        
-        # Fallback if JSON parsing fails
-        if not full_response.strip():
+                pass
+
+        # If nothing was produced at all
+        if not full_response.strip() and all(len(v) == 0 for v in partial_buffers.values()):
             yield {"field": "initial_response", "content": "No response received from LM Studio"}
             yield {"field": "generated_code", "content": ""}
             yield {"field": "result_commentary", "content": "Unable to process request"}

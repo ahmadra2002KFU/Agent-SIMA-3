@@ -2,6 +2,134 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2025-09-28] - Enhanced Code Block Styling
+
+### Added
+- **Syntax Highlighting**: Integrated Prism.js library for Python syntax highlighting in generated code blocks
+- **Copy to Clipboard**: Added copy button with visual feedback for easy code copying
+- **Professional Code Block Design**: Redesigned code blocks with header, language indicator, and improved styling
+- **Enhanced Visual Design**: Added custom CSS for better code readability with proper color schemes for both light and dark modes
+
+### Changed
+- **Code Block Structure**: Replaced basic `<pre>` elements with structured code blocks containing header and content sections
+- **Styling**: Updated from basic gray background to professional code editor appearance
+- **Typography**: Added monospace font stack for better code readability
+- **Color Scheme**: Implemented custom syntax highlighting colors that match the application's design theme
+
+### Technical Details
+- Added Prism.js CDN links for syntax highlighting support
+- Created custom CSS classes for code block styling (`.code-block-container`, `.code-block-header`, etc.)
+- Updated WebSocket message handling to work with new code structure
+- Added `copyCodeToClipboard()` function with clipboard API and fallback support
+- Enhanced syntax highlighting with custom token colors matching the app's color palette
+
+### Impact
+- Significantly improved code readability and user experience
+- Professional appearance matching modern code editors
+- Easy code copying functionality for user convenience
+- Better visual hierarchy and organization of generated code
+
+## [2025-09-28] - Code Block Width Constraints & Responsive Design
+
+### Fixed
+- **Width Overflow Issue**: Fixed code blocks extending too much when LLM generates very long code
+- **Responsive Design**: Added proper width and height constraints for different screen sizes
+- **Scrolling Behavior**: Implemented proper scrolling for both horizontal and vertical overflow
+
+### Added
+- **Maximum Height**: Set 500px max height for code blocks with vertical scrolling
+- **Word Wrapping**: Added proper word wrapping for long lines
+- **Custom Scrollbars**: Styled scrollbars to match the application theme
+- **Mobile Optimization**: Responsive design for tablets and mobile devices
+
+### Changed
+- **Container Constraints**: Added `max-width: 100%` and `width: 100%` to prevent overflow
+- **Content Overflow**: Enhanced overflow handling with both x and y axis scrolling
+- **Font Sizing**: Responsive font sizes for different screen sizes
+- **Padding Adjustments**: Optimized padding for mobile devices
+
+### Technical Details
+- Added responsive CSS media queries for 768px and 480px breakpoints
+- Implemented custom webkit scrollbar styling for better visual integration
+- Enhanced word wrapping with `word-wrap: break-word` and `overflow-wrap: break-word`
+- Set maximum height constraints to prevent extremely tall code blocks
+
+### Impact
+- Prevents code blocks from breaking the layout on long code generation
+- Maintains readability across all device sizes
+- Provides smooth scrolling experience for large code blocks
+- Ensures consistent user experience regardless of code length
+
+## [2025-09-28] - Critical Bug Fixes: LLM Response & JSON Serialization Issues
+
+### Fixed
+- **NaT JSON Serialization Error**: Fixed "Object of type NaTType is not JSON serializable" error by adding specific handling for pandas NaT (Not a Time) values in `_serialize_value` method
+- **Malformed Code Generation**: Enhanced JSON parsing robustness in `extract_partial` function to prevent code corruption with escape sequences
+- **DataFrame Timestamp Serialization**: Fixed serialization of pandas Timestamps in DataFrame results to prevent JSON errors
+- **Error Handling**: Added comprehensive error handling and logging throughout the WebSocket processing pipeline
+
+### Added
+- **Enhanced Error Logging**: Added detailed error logging with stack traces for better debugging
+- **Robust JSON Parsing**: Improved `extract_partial` function with better error handling and fallback mechanisms
+- **Safe Result Serialization**: Added `default=str` parameter to JSON serialization for execution results
+- **NaT Value Handling**: Specific handling for pandas NaT values, converting them to `None` for JSON compatibility
+
+### Changed
+- **Code Execution Error Handling**: Wrapped code execution in try-catch blocks to prevent cascading failures
+- **JSON Serialization**: Enhanced `_serialize_value` method to handle edge cases with pandas timestamp types
+- **DataFrame Processing**: Improved DataFrame serialization to properly handle all data types including timestamps
+
+### Technical Details
+- Modified `_serialize_value` in `server/code_executor.py` to handle `pd.isna()` values and invalid timestamps
+- Enhanced `extract_partial` in `server/lm_studio_client.py` with better error handling and logging
+- Added try-catch blocks around code execution in `server/app.py` WebSocket endpoint
+- Improved DataFrame record serialization to use `_serialize_value` for all values
+
+### Impact
+- Fixes the specific issue with Saudi patient admission analysis queries
+- Prevents LLM response corruption and malformed code generation
+- Eliminates JSON serialization errors that caused fallback responses
+- Ensures robust handling of date/time data in analysis queries
+- Maintains system stability even when encountering edge cases
+
+## [2025-09-28] - Critical Bug Fix: JSON Escape Sequence Handling
+
+### Fixed
+- **JSON Escape Sequence Bug**: Fixed critical bug in `extract_partial` function where JSON escape sequences (`\n`, `\t`, `\"`, etc.) were being stripped but not properly decoded, causing code execution failures
+- **Streaming Delta Logic**: Enhanced streaming logic in `app.py` to ensure frontend receives corrected content after final JSON parsing, preventing UI/backend content synchronization issues
+- **Frontend WebSocket Handling**: Added support for "replace" event type to handle corrected escape sequences in streamed content
+
+### Technical Details
+- Modified `extract_partial` function in `server/lm_studio_client.py` to use JSON's built-in decoder for proper escape sequence handling
+- Added fallback logic for partial/incomplete strings during streaming
+- Enhanced WebSocket streaming in `server/app.py` to force content replacement when escape sequences are corrected
+- Updated frontend in `index.html` to handle "replace" events for seamless content correction
+
+### Impact
+- Fixes code execution failures caused by malformed escape sequences in generated code
+- Ensures Plotly visualization code with newlines executes correctly
+- Maintains UI consistency with backend-stored content
+- Preserves real-time streaming performance while fixing content accuracy
+
+### Testing
+- Created comprehensive test suite verifying escape sequence handling for various scenarios
+- Tested with complex nested escape sequences and partial JSON streaming
+- Verified Plotly code generation and execution works correctly
+
+## [2025-09-28] - Streaming UX: true realtime deltas
+
+### Changed
+- Backend (LM Studio client): Implemented incremental, best‑effort parsing in `generate_structured_response` to start streaming each field (initial_response, generated_code, result_commentary) as soon as it begins, instead of waiting for the full JSON to complete.
+- Backend (WebSocket): Stream only new deltas per field to the client, avoiding re‑sending previously streamed text.
+
+### Result
+- Responses begin rendering within ~1–2 seconds with visible progressive updates.
+- Eliminated UI “all at once” appearance caused by server‑side buffering on full JSON parse.
+
+### Notes
+- Parser is best‑effort and handles escaped quotes; if LM output deviates from the expected top‑level JSON with string fields, it falls back gracefully.
+
+
 ## [2025-09-28] - Plotting/Visualization fixes and duplicate tab mitigation
 
 ### Fixed

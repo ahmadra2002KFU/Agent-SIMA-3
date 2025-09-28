@@ -33,7 +33,7 @@ A comprehensive local LLM-powered chatbot web interface with advanced file proce
 1. **Clone the repository**:
 ```bash
 git clone <repository-url>
-cd Agent3
+cd Agent-SIMA-3
 ```
 
 2. **Create and activate virtual environment**:
@@ -47,7 +47,7 @@ source .venv/bin/activate
 
 3. **Install dependencies**:
 ```bash
-pip install fastapi uvicorn[standard] pandas openpyxl plotly requests aiofiles websockets python-multipart
+pip install fastapi uvicorn[standard] pandas openpyxl plotly requests aiofiles websockets python-multipart aiohttp
 ```
 
 4. **Start LM Studio**:
@@ -63,6 +63,35 @@ uvicorn app:app --host 127.0.0.1 --port 8010
 
 6. **Open your browser**:
    Navigate to `http://localhost:8010`
+
+
+## 🧭 From zero to running (Windows tutorial)
+
+1. Open PowerShell in the project root (Agent-SIMA-3)
+2. Create and activate venv:
+   - `python -m venv .venv`
+   - `.\.venv\Scripts\Activate.ps1`
+3. Install deps:
+   - `pip install -r requirements.txt` if available; otherwise:
+   - `pip install fastapi uvicorn[standard] pandas openpyxl plotly requests aiofiles websockets python-multipart aiohttp`
+4. Start LM Studio (port 1234) and load a model.
+5. Start the server:
+   - `cd server` ; `uvicorn app:app --host 127.0.0.1 --port 8010`
+6. Open http://127.0.0.1:8010 in your browser.
+
+### Verifying realtime streaming
+- Ask: "I want you to deeply analyze and compare the admission rate changes between 2024 and 2025 for Saudi patients".
+- Expect:
+  - UI shows Analysis/Generated Code/Results sections immediately (~1–2s)
+  - Text grows progressively per section
+  - No full-response buffering
+
+If LM Studio isn’t running, you’ll see a fallback message; streaming still works, but analysis quality will be limited.
+
+### Troubleshooting streaming
+- WebSocket must connect (no 403/upgrade errors). Check Console.
+- If text appears all at once, ensure you’re running this repo’s server (not a static file), and confirm `uvicorn app:app` is started from the `server` folder.
+- On proxies/CDNs: avoid them in local dev; they may buffer.
 
 ## 🏗️ Architecture
 

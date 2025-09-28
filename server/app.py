@@ -51,6 +51,8 @@ CRITICAL RULES FOR CODE GENERATION:
 - ALWAYS use the variable 'df' which contains the already-loaded uploaded data
 - The uploaded file is pre-processed and available as 'df' - do not attempt to load it again
 - If you need to reference the data, use 'df' directly
+- IMPORTANT: ALWAYS assign your final output/results to a variable named 'result' or 'output'
+- For visualizations, assign the figure to 'fig' or 'figure'
 
 When responding to user queries:
 1. First provide an initial response explaining what you plan to do
@@ -60,17 +62,32 @@ When responding to user queries:
 You have access to pandas, plotly, numpy, and other data analysis libraries.
 Focus on creating high-quality, interactive visualizations when requested.
 
-EXAMPLE of correct code:
+EXAMPLES of correct code:
 ```python
-# CORRECT - use the pre-loaded dataframe
+# CORRECT - use the pre-loaded dataframe and assign to result
 saudi_patients = df[df['Nationality'].str.contains('Saudi', case=False, na=False)]
-count = len(saudi_patients)
+result = len(saudi_patients)
+```
+
+```python
+# CORRECT - for showing data
+result = df.head(5)
+```
+
+```python
+# CORRECT - for multiple results
+admissions_by_year = df.groupby('year').size()
+percent_change = calculate_change(admissions_by_year)
+result = {'admissions': admissions_by_year, 'change': percent_change}
 ```
 
 NEVER do this:
 ```python
 # WRONG - do not try to read files
 df = pd.read_csv('filename.csv')  # This will fail!
+
+# WRONG - no result variable assigned
+df.head(5)  # This won't capture the output!
 ```"""
 
 
@@ -339,6 +356,8 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 # Use LM Studio for response generation with 3-layer architecture
                 try:
                     field_content = {"initial_response": "", "generated_code": "", "result_commentary": ""}
+                    # Track how many characters have been streamed per field to avoid re-sending
+                    last_sent_len = {"initial_response": 0, "generated_code": 0, "result_commentary": 0}
 
                     # Get file metadata if available
                     file_metadata = file_handler.get_current_file_metadata()
@@ -364,12 +383,16 @@ async def ws_endpoint(ws: WebSocket) -> None:
                         if field and field in field_content:
                             field_content[field] = content
 
-                            # Stream the content in chunks for initial_response and generated_code
+                            # Stream only the newly added delta for initial_response and generated_code
                             if field in ["initial_response", "generated_code"]:
-                                for i in range(0, len(content), 8):
-                                    chunk = content[i:i+8]
-                                    await ws.send_json({"event": "delta", "field": field, "delta": chunk})
-                                    await asyncio.sleep(0.02)
+                                start = last_sent_len[field]
+                                if start < len(content):
+                                    delta = content[start:]
+                                    for i in range(0, len(delta), 8):
+                                        chunk = delta[i:i+8]
+                                        await ws.send_json({"event": "delta", "field": field, "delta": chunk})
+                                        await asyncio.sleep(0.02)
+                                    last_sent_len[field] = len(content)
 
                     # Step 2: Execute generated code if any
                     execution_results = None
@@ -381,24 +404,40 @@ async def ws_endpoint(ws: WebSocket) -> None:
                         dataframe = current_file['dataframe'] if current_file else None
 
                         # Execute the code
-                        success, output, results = code_executor.execute_code(
-                            field_content["generated_code"],
-                            dataframe
-                        )
+                        try:
+                            success, output, results = code_executor.execute_code(
+                                field_content["generated_code"],
+                                dataframe
+                            )
 
-                        execution_results = {
-                            "success": success,
-                            "output": output,
-                            "results": results
-                        }
+                            execution_results = {
+                                "success": success,
+                                "output": output,
+                                "results": results
+                            }
 
-                        # Send execution status
-                        status_msg = "Code executed successfully. " if success else f"Code execution failed: {output[:100]}... "
-                        await ws.send_json({"event": "delta", "field": "result_commentary", "delta": status_msg})
+                            # Send execution status
+                            status_msg = "Code executed successfully. " if success else f"Code execution failed: {output[:100]}... "
+                            await ws.send_json({"event": "delta", "field": "result_commentary", "delta": status_msg})
+                        except Exception as e:
+                            logger.error(f"Code execution error: {str(e)}", exc_info=True)
+                            execution_results = {
+                                "success": False,
+                                "output": f"Code execution error: {str(e)}",
+                                "results": None
+                            }
+                            await ws.send_json({"event": "delta", "field": "result_commentary", "delta": f"Code execution failed: {str(e)[:100]}... "})
 
                     # Step 3: Generate commentary based on execution results
                     if execution_results:
-                        commentary_prompt = f"Provide natural language interpretation of the following code execution results: {json.dumps(execution_results, indent=2)}"
+                        try:
+                            # Safely serialize execution results for the prompt
+                            serialized_results = json.dumps(execution_results, indent=2, default=str)
+                            commentary_prompt = f"Provide natural language interpretation of the following code execution results: {serialized_results}"
+                        except Exception as e:
+                            logger.error(f"Failed to serialize execution results: {str(e)}", exc_info=True)
+                            # Fallback to basic string representation
+                            commentary_prompt = f"Provide natural language interpretation of the following code execution results: {str(execution_results)}"
 
                         async for response_chunk in lm_client.generate_structured_response(
                             user_message=commentary_prompt,
@@ -414,18 +453,43 @@ async def ws_endpoint(ws: WebSocket) -> None:
 
                             if field == "result_commentary":
                                 field_content["result_commentary"] = content
-                                # Stream the commentary
-                                for i in range(0, len(content), 8):
-                                    chunk = content[i:i+8]
-                                    await ws.send_json({"event": "delta", "field": "result_commentary", "delta": chunk})
-                                    await asyncio.sleep(0.02)
+                                # Stream only the newly added portion of the commentary
+                                start = last_sent_len["result_commentary"]
+                                if start < len(content):
+                                    delta = content[start:]
+                                    for i in range(0, len(delta), 8):
+                                        chunk = delta[i:i+8]
+                                        await ws.send_json({"event": "delta", "field": "result_commentary", "delta": chunk})
+                                        await asyncio.sleep(0.02)
+                                    last_sent_len["result_commentary"] = len(content)
                     else:
                         # No code execution, use the original commentary
                         commentary = field_content.get("result_commentary", "")
-                        for i in range(0, len(commentary), 8):
-                            chunk = commentary[i:i+8]
-                            await ws.send_json({"event": "delta", "field": "result_commentary", "delta": chunk})
-                            await asyncio.sleep(0.02)
+                        start = last_sent_len["result_commentary"]
+                        if start < len(commentary):
+                            delta = commentary[start:]
+                            for i in range(0, len(delta), 8):
+                                chunk = delta[i:i+8]
+                                await ws.send_json({"event": "delta", "field": "result_commentary", "delta": chunk})
+                                await asyncio.sleep(0.02)
+                            last_sent_len["result_commentary"] = len(commentary)
+
+                    # Before sending final object, ensure any corrected content from final JSON parsing
+                    # is sent to the frontend (to fix escape sequence issues)
+                    for field in ["initial_response", "generated_code"]:
+                        current_content = field_content.get(field, "")
+                        if current_content and last_sent_len[field] < len(current_content):
+                            # Send any remaining content that wasn't streamed
+                            delta = current_content[last_sent_len[field]:]
+                            for i in range(0, len(delta), 8):
+                                chunk = delta[i:i+8]
+                                await ws.send_json({"event": "delta", "field": field, "delta": chunk})
+                                await asyncio.sleep(0.02)
+                            last_sent_len[field] = len(current_content)
+                        elif current_content and len(current_content) == last_sent_len[field]:
+                            # Force a replacement delta to ensure corrected escape sequences are sent
+                            # This handles the case where string lengths match but content differs
+                            await ws.send_json({"event": "replace", "field": field, "content": current_content})
 
                     # Send final assembled object
                     await ws.send_json({
@@ -434,6 +498,8 @@ async def ws_endpoint(ws: WebSocket) -> None:
                     })
 
                 except Exception as e:
+                    # Log the full error for debugging
+                    logger.error(f"LM Studio processing error: {str(e)}", exc_info=True)
                     # Fallback to stub response if LM Studio fails
                     await _send_fallback_response(ws, user_msg, f"LM Studio error: {str(e)}")
             else:

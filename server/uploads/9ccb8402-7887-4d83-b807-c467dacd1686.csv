@@ -1,0 +1,3 @@
+name,age,salary,department,location,start_date,end_date,performance_rating,bonus,benefits,vacation_days,sick_days,manager,team,project,skills,certifications,education,experience_years,previous_company
+John,25,50000,Engineering,New York,2020-01-01,2023-12-31,4.5,5000,health_dental_vision,20,10,Jane Smith,Backend,Project Alpha,Python_JavaScript_SQL,AWS_Certified,Computer Science,3,TechCorp
+Jane,30,60000,Marketing,Los Angeles,2019-03-15,2024-06-30,4.8,7000,health_dental_vision_401k,25,12,Bob Johnson,Frontend,Project Beta,React_TypeScript_CSS,Google_Analytics,Marketing,5,AdAgency
