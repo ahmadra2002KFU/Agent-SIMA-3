@@ -8,6 +8,7 @@ from typing import Any, Dict
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from lm_studio_client import lm_client
 from file_handler import file_handler
@@ -41,6 +42,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Local LLM Chatbot (POC)", lifespan=lifespan)
+
+# Mount static files to serve the logo
+app.mount("/static", StaticFiles(directory=".."), name="static")
 
 # System prompt for the LLM
 SYSTEM_PROMPT = """You are an AI assistant specialized in data analysis and visualization.

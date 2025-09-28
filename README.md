@@ -20,6 +20,7 @@ A comprehensive local LLM-powered chatbot web interface with advanced file proce
 - **Custom visualization generation** with professional styling
 - **Session persistence** for user preferences and rules
 - **Complete API ecosystem** for programmatic access
+- **Professional branding** with integrated AI Sima logo and consistent visual identity
 
 ## 🚀 Quick Start
 
@@ -162,6 +163,23 @@ python test_frontend_integration.py # Frontend integration
 - **Size limits** to prevent abuse
 - **Content validation** before processing
 - **Temporary file cleanup**
+
+## 📁 Project Structure
+
+```
+Agent-SIMA-3/
+├── aisimalogo.png          # Official AI Sima logo file
+├── index.html              # Main frontend interface
+├── server/                 # Backend FastAPI application
+│   ├── app.py             # Main application server
+│   ├── lm_studio_client.py # LM Studio integration
+│   ├── code_executor.py   # Sandboxed code execution
+│   ├── file_handler.py    # File upload processing
+│   └── ...                # Other backend modules
+├── uploads/               # Uploaded file storage
+├── config/                # Configuration files
+└── README.md              # This file
+```
 
 ## 📖 Usage
 
