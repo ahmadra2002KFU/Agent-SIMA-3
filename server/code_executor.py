@@ -14,8 +14,9 @@ import plotly.io as pio
 from plotly.subplots import make_subplots
 import json
 import base64
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, List
 import logging
+import ast
 
 logger = logging.getLogger(__name__)
 
@@ -60,67 +61,178 @@ class CodeExecutor:
         }
     
     def execute_code(
-        self, 
-        code: str, 
+        self,
+        code: str,
         dataframe: Optional[pd.DataFrame] = None,
         timeout: int = 30
     ) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """
-        Execute Python code in a sandboxed environment.
-        
+        Execute Python code in a sandboxed environment with enhanced validation.
+
         Args:
             code: Python code to execute
             dataframe: Optional DataFrame to make available as 'df'
             timeout: Execution timeout in seconds
-            
+
         Returns:
             Tuple of (success, output/error, results_dict)
         """
         try:
+            # Pre-execution validation with auto-fix
+            validated_code, validation_warnings = self._validate_and_fix_code(code)
+            if validated_code is None:
+                return False, "Code validation failed: Unable to fix syntax errors", None
+
+            # Use validated code for execution
+            code_to_execute = validated_code
+
             # Capture stdout and stderr
             old_stdout = sys.stdout
             old_stderr = sys.stderr
             stdout_capture = io.StringIO()
             stderr_capture = io.StringIO()
-            
+
             # Create execution namespace
             namespace = self._create_namespace(dataframe)
-            
+
             # Results dictionary to capture variables
             results = {}
-            
+
             try:
                 # Redirect output
                 sys.stdout = stdout_capture
                 sys.stderr = stderr_capture
-                
-                # Execute the code
-                exec(code, namespace)
-                
+
+                # Execute the validated code
+                exec(code_to_execute, namespace)
+
                 # Capture important variables from namespace
                 results = self._extract_results(namespace)
-                
+
                 # Get output
                 output = stdout_capture.getvalue()
                 error_output = stderr_capture.getvalue()
-                
+
+                # Add validation warnings to output if any
+                if validation_warnings:
+                    output = f"Validation Warnings:\n" + "\n".join(validation_warnings) + "\n\n" + output
+
                 if error_output:
                     output += f"\nErrors/Warnings:\n{error_output}"
-                
+
                 return True, output, results
-                
+
             except Exception as e:
                 error_msg = f"Execution Error: {str(e)}\n{traceback.format_exc()}"
                 return False, error_msg, None
-                
+
             finally:
                 # Restore stdout/stderr
                 sys.stdout = old_stdout
                 sys.stderr = old_stderr
-                
+
         except Exception as e:
             logger.error(f"Code execution failed: {e}")
             return False, f"Execution setup failed: {str(e)}", None
+
+    def _validate_and_fix_code(self, code: str) -> Tuple[Optional[str], List[str]]:
+        """
+        Validate and auto-fix code before execution.
+
+        Args:
+            code: Python code to validate and fix
+
+        Returns:
+            Tuple of (validated_code, warnings_list)
+        """
+        try:
+            # Import validation engine
+            from validation_engine import ValidationEngine
+
+            validation_engine = ValidationEngine()
+            validation_result = validation_engine.validate_python_code(code)
+
+            if validation_result.is_valid:
+                # Code is valid, return cleaned version if available
+                cleaned_code = validation_result.cleaned_content or code
+                return cleaned_code, validation_result.warnings
+            else:
+                # Code has errors, check if auto-fix was applied
+                if validation_result.cleaned_content:
+                    # Auto-fix was attempted, try to validate the fixed version
+                    fixed_result = validation_engine.validate_python_code(validation_result.cleaned_content)
+                    if fixed_result.is_valid:
+                        warnings = validation_result.warnings + [f"Auto-fixed: {err}" for err in validation_result.errors]
+                        return validation_result.cleaned_content, warnings
+
+                # Unable to fix, log errors and return None
+                logger.error(f"Code validation failed: {validation_result.errors}")
+                return None, validation_result.warnings
+
+        except ImportError:
+            # Fallback to basic validation if validation engine not available
+            logger.warning("ValidationEngine not available, using basic validation")
+            return self._basic_code_validation(code)
+        except Exception as e:
+            logger.error(f"Code validation error: {e}")
+            return self._basic_code_validation(code)
+
+    def _basic_code_validation(self, code: str) -> Tuple[Optional[str], List[str]]:
+        """
+        Basic code validation fallback.
+
+        Args:
+            code: Python code to validate
+
+        Returns:
+            Tuple of (validated_code, warnings_list)
+        """
+        try:
+            # Basic syntax check
+            ast.parse(code)
+            return code, []
+        except SyntaxError as e:
+            # Try basic trailing backslash fix
+            if "unexpected EOF while parsing" in str(e):
+                fixed_code = self._fix_basic_trailing_backslash(code)
+                if fixed_code:
+                    try:
+                        ast.parse(fixed_code)
+                        return fixed_code, ["Fixed trailing backslash syntax error"]
+                    except SyntaxError:
+                        pass
+
+            logger.error(f"Basic code validation failed: {e}")
+            return None, [f"Syntax error: {str(e)}"]
+
+    def _fix_basic_trailing_backslash(self, code: str) -> Optional[str]:
+        """
+        Basic fix for trailing backslash issues.
+
+        Args:
+            code: Python code with potential trailing backslash
+
+        Returns:
+            Fixed code or None if unable to fix
+        """
+        try:
+            lines = code.split('\n')
+            fixed_lines = []
+
+            for line in lines:
+                stripped = line.rstrip()
+                if stripped.endswith('\\') and (stripped.rstrip('\\').strip().endswith(('}', ']', ')'))):
+                    # Remove trailing backslash from complete structures
+                    fixed_line = stripped[:-1].rstrip()
+                    indent = len(line) - len(line.lstrip())
+                    fixed_lines.append(' ' * indent + fixed_line)
+                else:
+                    fixed_lines.append(line)
+
+            return '\n'.join(fixed_lines)
+
+        except Exception:
+            return None
     
     def _create_namespace(self, dataframe: Optional[pd.DataFrame] = None) -> Dict[str, Any]:
         """Create a safe execution namespace."""

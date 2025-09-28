@@ -178,7 +178,8 @@ async def execute_code(request: dict) -> JSONResponse:
         if not code:
             raise HTTPException(status_code=400, detail="No code provided")
 
-        # Validate code
+        # Enhanced validation with auto-fix (now integrated into execute_code)
+        # Basic security validation first
         is_safe, error_msg = code_executor.validate_code(code)
         if not is_safe:
             raise HTTPException(status_code=400, detail=f"Code validation failed: {error_msg}")
@@ -187,7 +188,7 @@ async def execute_code(request: dict) -> JSONResponse:
         current_file = file_handler.current_file
         dataframe = current_file['dataframe'] if current_file else None
 
-        # Execute code
+        # Execute code with enhanced validation and auto-fix
         success, output, results = code_executor.execute_code(code, dataframe)
 
         # Clean the response data to handle NaN values

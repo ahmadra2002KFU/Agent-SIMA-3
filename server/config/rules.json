@@ -18,20 +18,12 @@
       "created_at": "2025-09-27T06:03:13.198924"
     },
     {
-      "id": 4,
-      "text": "Rule 3",
-      "category": "imported",
-      "priority": 1,
-      "active": true,
-      "created_at": "2025-09-27T06:03:13.199747"
-    },
-    {
-      "id": 4,
-      "text": "Use Blue and green in all plots",
+      "id": 5,
+      "text": "Always use plotly instead of matplotlib",
       "category": "general",
       "priority": 1,
       "active": true,
-      "created_at": "2025-09-28T04:33:45.619897"
+      "created_at": "2025-09-28T23:46:10.761422"
     }
   ]
 }

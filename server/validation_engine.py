@@ -271,30 +271,203 @@ class ValidationEngine:
             return code
     
     def _fix_syntax_errors(self, code: str) -> Optional[str]:
-        """Attempt to fix common syntax errors."""
+        """Attempt to fix common syntax errors with enhanced detection."""
+        try:
+            # Apply multiple fix strategies in sequence
+            fixed_code = code
+
+            # Strategy 1: Fix trailing backslashes
+            fixed_code = self._fix_trailing_backslashes(fixed_code)
+
+            # Strategy 2: Fix incomplete dictionary/list/tuple definitions
+            fixed_code = self._fix_incomplete_definitions(fixed_code)
+
+            # Strategy 3: Fix malformed escape sequences
+            fixed_code = self._fix_malformed_escape_sequences(fixed_code)
+
+            # Strategy 4: Fix line-by-line issues
+            fixed_code = self._fix_line_issues(fixed_code)
+
+            # Test if it's valid now
+            ast.parse(fixed_code)
+            return fixed_code
+
+        except Exception:
+            return None
+
+    def _fix_trailing_backslashes(self, code: str) -> str:
+        """Fix trailing backslashes that cause EOF parsing errors."""
         try:
             lines = code.split('\n')
             fixed_lines = []
-            
+
+            for i, line in enumerate(lines):
+                stripped = line.rstrip()
+
+                # Check for trailing backslash at end of complete statements
+                if stripped.endswith('\\'):
+                    # Check if this is a legitimate line continuation
+                    if self._is_legitimate_line_continuation(stripped, lines, i):
+                        fixed_lines.append(line)
+                    else:
+                        # Remove trailing backslash from complete statements
+                        fixed_line = stripped[:-1].rstrip()
+                        # Preserve original indentation
+                        indent = len(line) - len(line.lstrip())
+                        fixed_lines.append(' ' * indent + fixed_line)
+                        logger.debug(f"Fixed trailing backslash on line {i+1}: '{stripped}' -> '{fixed_line}'")
+                else:
+                    fixed_lines.append(line)
+
+            return '\n'.join(fixed_lines)
+
+        except Exception as e:
+            logger.warning(f"Error fixing trailing backslashes: {e}")
+            return code
+
+    def _is_legitimate_line_continuation(self, line: str, all_lines: List[str], line_index: int) -> bool:
+        """Check if a trailing backslash is a legitimate line continuation."""
+        try:
+            stripped = line.rstrip('\\').strip()
+
+            # Not legitimate if it's after a complete dictionary/list/tuple
+            if re.search(r'[}\]\)]$', stripped):
+                return False
+
+            # Not legitimate if it's after a complete assignment
+            if re.search(r'=\s*[^=<>!]+$', stripped):
+                return False
+
+            # Check if next line exists and has content (legitimate continuation)
+            if line_index + 1 < len(all_lines):
+                next_line = all_lines[line_index + 1].strip()
+                if next_line:  # Has continuation content
+                    return True
+
+            # If no next line or empty next line, likely not legitimate
+            return False
+
+        except Exception:
+            return False
+
+    def _fix_incomplete_definitions(self, code: str) -> str:
+        """Fix incomplete dictionary, list, and tuple definitions."""
+        try:
+            # Fix unclosed dictionaries
+            code = self._fix_unclosed_structures(code, '{', '}', 'dictionary')
+
+            # Fix unclosed lists
+            code = self._fix_unclosed_structures(code, '[', ']', 'list')
+
+            # Fix unclosed tuples
+            code = self._fix_unclosed_structures(code, '(', ')', 'tuple')
+
+            return code
+
+        except Exception as e:
+            logger.warning(f"Error fixing incomplete definitions: {e}")
+            return code
+
+    def _fix_unclosed_structures(self, code: str, open_char: str, close_char: str, structure_type: str) -> str:
+        """Fix unclosed structures like dictionaries, lists, tuples."""
+        try:
+            lines = code.split('\n')
+            open_count = 0
+            close_count = 0
+            in_string = False
+            string_char = None
+
+            # More robust counting that handles strings and comments
+            for line in lines:
+                # Skip comment lines
+                stripped_line = line.strip()
+                if stripped_line.startswith('#'):
+                    continue
+
+                i = 0
+                while i < len(line):
+                    char = line[i]
+
+                    # Handle string literals
+                    if not in_string and char in ['"', "'"]:
+                        in_string = True
+                        string_char = char
+                    elif in_string and char == string_char:
+                        # Check if it's escaped
+                        if i == 0 or line[i-1] != '\\':
+                            in_string = False
+                            string_char = None
+
+                    # Count brackets/braces outside of strings
+                    if not in_string:
+                        if char == open_char:
+                            open_count += 1
+                        elif char == close_char:
+                            close_count += 1
+                        elif char == '#':
+                            # Rest of line is comment
+                            break
+
+                    i += 1
+
+            # Add missing closing characters if there's an imbalance
+            if open_count > close_count:
+                missing_closes = open_count - close_count
+                # Add on new lines for better formatting
+                code += '\n' + close_char * missing_closes
+                logger.debug(f"Added {missing_closes} missing '{close_char}' for {structure_type}")
+
+            return code
+
+        except Exception as e:
+            logger.warning(f"Error fixing unclosed {structure_type}: {e}")
+            return code
+
+    def _fix_malformed_escape_sequences(self, code: str) -> str:
+        """Fix malformed escape sequences in code."""
+        try:
+            # Fix common malformed escape sequences outside of strings
+            patterns = [
+                (r'\\n(?!["\'])', '\n'),      # Fix literal \n outside strings
+                (r'\\t(?!["\'])', '\t'),      # Fix literal \t outside strings
+                (r'\\"(?!["\'])', '"'),       # Fix literal \" outside strings
+                (r'\\r(?!["\'])', '\r'),      # Fix literal \r outside strings
+            ]
+
+            fixed_code = code
+            for pattern, replacement in patterns:
+                if re.search(pattern, fixed_code):
+                    fixed_code = re.sub(pattern, replacement, fixed_code)
+                    logger.debug(f"Fixed malformed escape sequence: {pattern}")
+
+            return fixed_code
+
+        except Exception as e:
+            logger.warning(f"Error fixing malformed escape sequences: {e}")
+            return code
+
+    def _fix_line_issues(self, code: str) -> str:
+        """Fix line-by-line syntax issues."""
+        try:
+            lines = code.split('\n')
+            fixed_lines = []
+
             for line in lines:
                 # Skip obviously corrupted lines
                 if re.search(r'[^\w\s\[\](){}.,=+\-*/<>!&|:;"\'\\]', line):
                     continue
-                
+
                 # Fix incomplete assignments
                 if '=' in line and not line.strip().endswith(('=', '==', '!=', '<=', '>=')):
                     fixed_lines.append(line)
                 else:
                     fixed_lines.append(line)
-            
-            fixed_code = '\n'.join(fixed_lines)
-            
-            # Test if it's valid now
-            ast.parse(fixed_code)
-            return fixed_code
-            
-        except Exception:
-            return None
+
+            return '\n'.join(fixed_lines)
+
+        except Exception as e:
+            logger.warning(f"Error fixing line issues: {e}")
+            return code
     
     def _validate_code_security(self, code: str) -> ValidationResult:
         """Validate code for security issues."""
@@ -333,10 +506,12 @@ class ValidationEngine:
             r'\)\s+\)',           # Duplicate parentheses with space
             r'n\\f\[',            # Specific corruption pattern from original issue
             r'== \d+\] == \d+\]', # Specific pattern from original error
+            r'[}\]\)]\s*\\$',     # Trailing backslash after complete structures
+            r'=\s*[^=<>!]+\\$',   # Trailing backslash after assignments
         ]
 
         for pattern in corruption_patterns:
-            if re.search(pattern, content):
+            if re.search(pattern, content, re.MULTILINE):
                 return True
 
         return False
