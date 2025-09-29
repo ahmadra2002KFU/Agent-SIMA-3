@@ -46,25 +46,64 @@
             'opsz'24
         }
         
-        /* Prevent overlapping and ensure proper spacing */
+        /* Mobile responsive design */
         @media (max-width: 768px) {
             .flex.h-screen {
                 flex-direction: column;
             }
-            
-            aside {
-                width: 100% !important;
-                height: auto;
-                border-right: none !important;
-                border-bottom: 1px solid rgb(229, 231, 235);
+
+            /* Mobile sidebar behavior - overlay instead of push */
+            .sidebar-container {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                width: 288px !important;
+                z-index: 50;
+                transform: translateX(0);
+                transition: transform 0.3s ease-in-out;
+                border-right: 1px solid rgb(229, 231, 235);
+                border-bottom: none;
             }
-            
-            .dark aside {
-                border-bottom-color: rgb(75, 85, 99);
+
+            .sidebar-collapsed {
+                transform: translateX(-100%) !important;
+                margin-left: 0 !important;
+                width: 288px !important;
             }
-            
-            main {
-                height: calc(100vh - 200px);
+
+            .dark .sidebar-container {
+                border-right-color: rgb(75, 85, 99);
+            }
+
+            /* Main content takes full width on mobile */
+            .main-content {
+                width: 100%;
+                margin-left: 0 !important;
+            }
+
+            /* Show toggle button on mobile */
+            #sidebar-toggle {
+                display: block !important;
+            }
+
+            /* Add backdrop when sidebar is open on mobile */
+            .sidebar-backdrop {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 40;
+                opacity: 0;
+                visibility: hidden;
+                transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+            }
+
+            .sidebar-backdrop.active {
+                opacity: 1;
+                visibility: visible;
             }
         }
         
@@ -285,6 +324,60 @@
             color: #ea580c;
         }
 
+        /* Sidebar Toggle Animations */
+        .sidebar-container {
+            transition: width 0.3s ease-in-out, margin-left 0.3s ease-in-out;
+            overflow: hidden;
+        }
+
+        .sidebar-collapsed {
+            width: 0 !important;
+            margin-left: -288px;
+            min-width: 0;
+        }
+
+        .sidebar-content {
+            width: 288px;
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        .sidebar-collapsed .sidebar-content {
+            opacity: 0;
+        }
+
+        .main-content {
+            transition: margin-left 0.3s ease-in-out;
+        }
+
+        .main-expanded {
+            margin-left: 0;
+        }
+
+        /* Toggle button animation and feedback */
+        #sidebar-toggle {
+            transition: all 0.2s ease-in-out;
+            position: relative;
+        }
+
+        #sidebar-toggle:hover {
+            transform: scale(1.05);
+            background-color: rgba(13, 71, 161, 0.1);
+        }
+
+        #sidebar-toggle:active {
+            transform: scale(0.95);
+            background-color: rgba(13, 71, 161, 0.2);
+        }
+
+        /* Visual feedback for toggle state */
+        #sidebar-toggle .material-symbols-outlined {
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .sidebar-collapsed ~ main #sidebar-toggle .material-symbols-outlined {
+            transform: rotate(180deg);
+        }
+
         /* Responsive design for code blocks */
         @media (max-width: 768px) {
             .code-block-content {
@@ -304,6 +397,11 @@
                 padding: 0.25rem 0.5rem;
                 font-size: 0.625rem;
             }
+
+            /* Ensure toggle button is visible on mobile */
+            #sidebar-toggle {
+                display: block;
+            }
         }
 
         @media (max-width: 480px) {
@@ -319,8 +417,11 @@
     </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark font-display text-text-light dark:text-text-dark transition-colors duration-300">
+<!-- Mobile sidebar backdrop -->
+<div id="sidebar-backdrop" class="sidebar-backdrop"></div>
 <div class="flex h-screen relative">
-<aside class="w-72 bg-surface-light dark:bg-surface-dark p-6 flex flex-col justify-between shadow-lg relative z-20 border-r border-gray-200 dark:border-gray-700">
+<aside id="sidebar" class="sidebar-container w-72 bg-surface-light dark:bg-surface-dark shadow-lg relative z-20 border-r border-gray-200 dark:border-gray-700">
+<div class="sidebar-content p-6 flex flex-col justify-between h-full">
 <div>
 <div class="flex items-center space-x-3 mb-6">
 <img alt="AI Sima Logo" class="h-10 w-10" src="/static/aisimalogo.png"/>
@@ -388,9 +489,16 @@ No recent chats
 </a>
 </div>
 </div>
+</div>
 </aside>
-<main class="flex-1 flex flex-col relative">
-<header class="flex justify-end p-4 relative z-30">
+<main id="main-content" class="main-content flex-1 flex flex-col relative">
+<header class="flex justify-between items-center p-4 relative z-30">
+<!-- Sidebar Toggle Button -->
+<button id="sidebar-toggle" class="p-2 text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-blue-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50" aria-label="Toggle sidebar">
+<span class="material-symbols-outlined text-2xl">menu</span>
+</button>
+
+<!-- Model Status -->
 <div class="flex items-center space-x-2 bg-surface-light dark:bg-surface-dark px-4 py-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600">
 <span class="relative flex h-3 w-3 z-10">
 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -450,6 +558,118 @@ No recent chats
 </div>
     <script>
       (function(){
+        // Sidebar Toggle Functionality
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const mainContent = document.getElementById('main-content');
+        const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+
+        // Check if we're on mobile
+        function isMobile() {
+          return window.innerWidth <= 768;
+        }
+
+        // Load sidebar state from localStorage (only for desktop)
+        const sidebarCollapsed = !isMobile() && localStorage.getItem('sidebarCollapsed') === 'true';
+
+        // Apply initial state
+        if (sidebarCollapsed && !isMobile()) {
+          sidebar.classList.add('sidebar-collapsed');
+          mainContent.classList.add('main-expanded');
+        } else if (isMobile()) {
+          // On mobile, start with sidebar collapsed
+          sidebar.classList.add('sidebar-collapsed');
+        }
+
+        // Set initial icon
+        updateToggleIcon();
+
+        // Update toggle button icon
+        function updateToggleIcon() {
+          const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
+          const icon = sidebarToggle.querySelector('.material-symbols-outlined');
+          if (icon) {
+            icon.textContent = isCollapsed ? 'menu_open' : 'menu';
+          }
+        }
+
+        // Toggle function
+        function toggleSidebar() {
+          const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
+          const mobile = isMobile();
+
+          if (isCollapsed) {
+            // Expand sidebar
+            sidebar.classList.remove('sidebar-collapsed');
+            if (!mobile) {
+              mainContent.classList.remove('main-expanded');
+              localStorage.setItem('sidebarCollapsed', 'false');
+            } else {
+              // Show backdrop on mobile
+              sidebarBackdrop.classList.add('active');
+            }
+          } else {
+            // Collapse sidebar
+            sidebar.classList.add('sidebar-collapsed');
+            if (!mobile) {
+              mainContent.classList.add('main-expanded');
+              localStorage.setItem('sidebarCollapsed', 'true');
+            } else {
+              // Hide backdrop on mobile
+              sidebarBackdrop.classList.remove('active');
+            }
+          }
+
+          // Update icon to reflect new state
+          updateToggleIcon();
+        }
+
+        // Add event listener to toggle button
+        sidebarToggle.addEventListener('click', toggleSidebar);
+
+        // Close sidebar when clicking backdrop on mobile
+        sidebarBackdrop.addEventListener('click', () => {
+          if (isMobile()) {
+            sidebar.classList.add('sidebar-collapsed');
+            sidebarBackdrop.classList.remove('active');
+          }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+          const mobile = isMobile();
+          if (mobile) {
+            // On mobile, remove desktop classes and hide backdrop
+            mainContent.classList.remove('main-expanded');
+            sidebarBackdrop.classList.remove('active');
+            if (!sidebar.classList.contains('sidebar-collapsed')) {
+              sidebar.classList.add('sidebar-collapsed');
+            }
+          } else {
+            // On desktop, restore saved state and hide backdrop
+            sidebarBackdrop.classList.remove('active');
+            const savedState = localStorage.getItem('sidebarCollapsed') === 'true';
+            if (savedState) {
+              sidebar.classList.add('sidebar-collapsed');
+              mainContent.classList.add('main-expanded');
+            } else {
+              sidebar.classList.remove('sidebar-collapsed');
+              mainContent.classList.remove('main-expanded');
+            }
+          }
+          // Update icon after resize
+          updateToggleIcon();
+        });
+
+        // Keyboard shortcut (Ctrl/Cmd + B)
+        document.addEventListener('keydown', (e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+            e.preventDefault();
+            toggleSidebar();
+          }
+        });
+
+        // Main application variables
         const startView = document.getElementById('chat-start-view');
         const convoView = document.getElementById('chat-conversation-view');
         const input = document.getElementById('chat-input');

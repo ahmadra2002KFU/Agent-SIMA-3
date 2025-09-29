@@ -2,22 +2,6 @@
   "version": 1,
   "rules": [
     {
-      "id": 2,
-      "text": "Rule 1",
-      "category": "imported",
-      "priority": 1,
-      "active": true,
-      "created_at": "2025-09-27T06:03:13.198110"
-    },
-    {
-      "id": 3,
-      "text": "Rule 2",
-      "category": "imported",
-      "priority": 1,
-      "active": true,
-      "created_at": "2025-09-27T06:03:13.198924"
-    },
-    {
       "id": 5,
       "text": "Always use plotly instead of matplotlib",
       "category": "general",

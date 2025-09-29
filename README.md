@@ -12,6 +12,7 @@ A comprehensive local LLM-powered chatbot web interface with advanced file proce
 - **Interactive Plotly visualizations** with publication-ready styling
 - **User-defined rules system** with persistent configuration
 - **Modern responsive UI** with dark/light theme support
+- **Collapsible sidebar** with toggle button and keyboard shortcuts (Ctrl/Cmd + B)
 
 ### Advanced Capabilities
 - **Comprehensive metadata extraction** from uploaded datasets
@@ -181,12 +182,28 @@ Agent-SIMA-3/
 └── README.md              # This file
 ```
 
+## 🎛️ User Interface Features
+
+### Sidebar Toggle
+- **Toggle Button**: Click the hamburger menu (☰) in the header to collapse/expand the sidebar
+- **Keyboard Shortcut**: Press `Ctrl+B` (Windows/Linux) or `Cmd+B` (Mac) to toggle
+- **State Persistence**: Your sidebar preference is remembered across sessions
+- **Responsive Design**:
+  - **Desktop**: Sidebar pushes content, main area expands when collapsed
+  - **Mobile**: Sidebar overlays content with backdrop, starts collapsed
+
+### Layout Optimization
+- **Space Management**: Collapse sidebar to gain 288px of horizontal space for data analysis
+- **Focus Mode**: Hide sidebar distractions when working with visualizations
+- **Quick Access**: Toggle button always visible in header for easy access
+
 ## 📖 Usage
 
 1. **Upload a file**: Drag & drop or select CSV/XLSX files
 2. **Add custom rules**: Define analysis preferences in the sidebar
-3. **Chat with AI**: Ask questions about your data
-4. **View results**: See real-time streaming responses with:
+3. **Toggle sidebar**: Use the hamburger menu or Ctrl/Cmd+B to optimize your workspace
+4. **Chat with AI**: Ask questions about your data
+5. **View results**: See real-time streaming responses with:
    - Initial analysis
    - Generated Python code
    - Interactive visualizations

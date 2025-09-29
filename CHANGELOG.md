@@ -2,6 +2,59 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.5] - 2025-01-28 - Sidebar Toggle Functionality
+
+### 🎛️ Enhanced User Interface with Collapsible Sidebar
+
+**IMPLEMENTED**: Added comprehensive sidebar toggle functionality with smooth animations, state persistence, and responsive design for improved user experience and screen space optimization.
+
+### ✨ New Features
+
+- **Toggle Button**: Added hamburger menu icon in header for easy sidebar collapse/expand
+- **Smooth Animations**: CSS transitions for seamless sidebar hide/show with 0.3s duration
+- **State Persistence**: localStorage integration to remember sidebar state across sessions
+- **Keyboard Shortcut**: Ctrl/Cmd + B hotkey for quick sidebar toggle
+- **Responsive Design**: Different behavior on mobile (overlay) vs desktop (push content)
+- **Mobile Backdrop**: Semi-transparent overlay when sidebar is open on mobile devices
+- **Accessibility**: ARIA labels, focus management, and keyboard navigation support
+
+### 🔧 Technical Implementation
+
+- **CSS Animations**: Smooth width, margin, and opacity transitions with easing
+- **JavaScript State Management**: Intelligent state handling for desktop vs mobile
+- **localStorage Persistence**: Automatic save/restore of sidebar preference
+- **Window Resize Handling**: Dynamic behavior adjustment based on screen size
+- **Mobile-First Design**: Overlay behavior on screens ≤768px, push behavior on desktop
+
+### 📱 Responsive Behavior
+
+**Desktop (>768px):**
+- Sidebar pushes main content when expanded
+- Main content expands to fill space when sidebar collapsed
+- State persisted in localStorage
+
+**Mobile (≤768px):**
+- Sidebar overlays content with backdrop
+- Starts collapsed by default
+- Touch-friendly backdrop dismissal
+- No localStorage persistence (always starts collapsed)
+
+### 🎯 User Experience Improvements
+
+- **Space Optimization**: Users can reclaim 288px of horizontal space
+- **Focus Enhancement**: Hide distractions when working with data
+- **Quick Access**: Toggle button always visible in header
+- **Intuitive Controls**: Standard hamburger icon and keyboard shortcut
+- **Smooth Interactions**: Professional animations and transitions
+
+### 🚀 Impact
+
+- **Improved Productivity**: More screen space for data analysis and visualizations
+- **Better Mobile Experience**: Optimized sidebar behavior for touch devices
+- **Enhanced Accessibility**: Keyboard shortcuts and ARIA compliance
+- **Professional UX**: Smooth animations and intuitive interactions
+- **Flexible Layout**: Users control their workspace layout preferences
+
 ## [2.1.4] - 2025-01-28 - Logo Integration
 
 ### 🎨 Brand Identity Enhancement
