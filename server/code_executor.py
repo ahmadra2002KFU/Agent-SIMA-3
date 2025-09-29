@@ -281,23 +281,41 @@ class CodeExecutor:
     def _extract_results(self, namespace: Dict[str, Any]) -> Dict[str, Any]:
         """Extract important results from the execution namespace."""
         results = {}
-        
+
         # Look for common result variables
         result_vars = ['result', 'output', 'fig', 'figure', 'plot', 'chart', 'summary', 'analysis']
-        
+
         for var_name in result_vars:
             if var_name in namespace:
                 value = namespace[var_name]
                 results[var_name] = self._serialize_value(value)
-        
-        # Look for any plotly figures
+
+        # Look for any plotly figures (avoid duplicates by tracking object IDs)
+        # Prefer variable names in priority order: fig, figure, plot, chart, result
+        figure_priority = ['fig', 'figure', 'plot', 'chart', 'result', 'output']
+        seen_figures = {}  # Maps object_id -> (priority_score, name, value)
+
         for name, value in namespace.items():
             if hasattr(value, 'to_json') and hasattr(value, 'show'):  # Likely a plotly figure
-                results[f'plotly_figure_{name}'] = {
-                    'type': 'plotly_figure',
-                    'json': value.to_json(),
-                    'html': value.to_html(include_plotlyjs='cdn')
-                }
+                fig_id = id(value)
+
+                # Calculate priority score (lower is better)
+                if name in figure_priority:
+                    priority = figure_priority.index(name)
+                else:
+                    priority = len(figure_priority)  # Lowest priority for unlisted names
+
+                # Keep the figure with the best (lowest) priority score
+                if fig_id not in seen_figures or priority < seen_figures[fig_id][0]:
+                    seen_figures[fig_id] = (priority, name, value)
+
+        # Serialize the unique figures with their best names
+        for fig_id, (priority, name, value) in seen_figures.items():
+            results[f'plotly_figure_{name}'] = {
+                'type': 'plotly_figure',
+                'json': value.to_json(),
+                'html': value.to_html(include_plotlyjs='cdn')
+            }
         
         # Look for DataFrames
         for name, value in namespace.items():
