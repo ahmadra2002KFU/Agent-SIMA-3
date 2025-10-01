@@ -48,28 +48,20 @@
         
         /* Mobile responsive design */
         @media (max-width: 768px) {
-            .flex.h-screen {
-                flex-direction: column;
-            }
-
             /* Mobile sidebar behavior - overlay instead of push */
             .sidebar-container {
                 position: fixed;
                 top: 0;
                 left: 0;
                 height: 100vh;
-                width: 288px !important;
+                width: 288px;
                 z-index: 50;
-                transform: translateX(0);
-                transition: transform 0.3s ease-in-out;
                 border-right: 1px solid rgb(229, 231, 235);
-                border-bottom: none;
             }
 
             .sidebar-collapsed {
-                transform: translateX(-100%) !important;
-                margin-left: 0 !important;
-                width: 288px !important;
+                transform: translateX(-100%);
+                opacity: 0;
             }
 
             .dark .sidebar-container {
@@ -80,11 +72,6 @@
             .main-content {
                 width: 100%;
                 margin-left: 0 !important;
-            }
-
-            /* Show toggle button on mobile */
-            #sidebar-toggle {
-                display: block !important;
             }
 
             /* Add backdrop when sidebar is open on mobile */
@@ -326,31 +313,26 @@
 
         /* Sidebar Toggle Animations */
         .sidebar-container {
-            transition: width 0.3s ease-in-out, margin-left 0.3s ease-in-out;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
             overflow: hidden;
         }
 
         .sidebar-collapsed {
-            width: 0 !important;
-            margin-left: -288px;
-            min-width: 0;
+            transform: translateX(-100%);
+            opacity: 0;
+            pointer-events: none;
         }
 
         .sidebar-content {
             width: 288px;
-            transition: opacity 0.2s ease-in-out;
-        }
-
-        .sidebar-collapsed .sidebar-content {
-            opacity: 0;
         }
 
         .main-content {
-            transition: margin-left 0.3s ease-in-out;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .main-expanded {
-            margin-left: 0;
+            margin-left: -288px;
         }
 
         /* Toggle button animation and feedback */
@@ -412,6 +394,338 @@
             .code-block-content pre {
                 font-size: 0.7rem;
                 padding: 0.5rem;
+            }
+        }
+
+        /* Modern Premium Input Design */
+        .premium-input-container {
+            position: relative;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            border-radius: 1.5rem;
+            border: 2px solid rgba(13, 71, 161, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08),
+                        0 2px 8px rgba(0, 0, 0, 0.04),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .dark .premium-input-container {
+            background: rgba(30, 30, 30, 0.8);
+            border-color: rgba(96, 165, 250, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+                        0 2px 8px rgba(0, 0, 0, 0.2),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+
+        .premium-input-container:hover {
+            border-color: rgba(13, 71, 161, 0.3);
+            box-shadow: 0 12px 48px rgba(13, 71, 161, 0.12),
+                        0 4px 12px rgba(0, 0, 0, 0.06),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            transform: translateY(-2px);
+        }
+
+        .dark .premium-input-container:hover {
+            border-color: rgba(96, 165, 250, 0.4);
+            box-shadow: 0 12px 48px rgba(96, 165, 250, 0.2),
+                        0 4px 12px rgba(0, 0, 0, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .premium-input-container.focused {
+            border-color: rgba(13, 71, 161, 0.5);
+            box-shadow: 0 0 0 4px rgba(13, 71, 161, 0.1),
+                        0 12px 48px rgba(13, 71, 161, 0.15),
+                        0 4px 12px rgba(0, 0, 0, 0.08),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            transform: translateY(-2px);
+        }
+
+        .dark .premium-input-container.focused {
+            border-color: rgba(96, 165, 250, 0.6);
+            box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.15),
+                        0 12px 48px rgba(96, 165, 250, 0.25),
+                        0 4px 12px rgba(0, 0, 0, 0.4),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .premium-textarea {
+            background: transparent;
+            border: none;
+            outline: none;
+            resize: none;
+            font-size: 0.9375rem;
+            line-height: 1.6;
+            color: #1a202c;
+            font-weight: 400;
+            transition: all 0.2s ease;
+        }
+
+        .dark .premium-textarea {
+            color: #e2e8f0;
+        }
+
+        .premium-textarea::placeholder {
+            color: #94a3b8;
+            font-weight: 400;
+        }
+
+        .dark .premium-textarea::placeholder {
+            color: #64748b;
+        }
+
+        .premium-attach-btn {
+            position: relative;
+            background: linear-gradient(135deg, rgba(13, 71, 161, 0.08) 0%, rgba(96, 165, 250, 0.08) 100%);
+            border-radius: 0.75rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .premium-attach-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(13, 71, 161, 0.15) 0%, rgba(96, 165, 250, 0.15) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .premium-attach-btn:hover::before {
+            opacity: 1;
+        }
+
+        .premium-attach-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(13, 71, 161, 0.2);
+        }
+
+        .premium-attach-btn:active {
+            transform: scale(0.95);
+        }
+
+        .dark .premium-attach-btn {
+            background: linear-gradient(135deg, rgba(96, 165, 250, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+        }
+
+        .premium-send-btn {
+            position: relative;
+            background: linear-gradient(135deg, #0D47A1 0%, #1976D2 100%);
+            border-radius: 1rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(13, 71, 161, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .premium-send-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .premium-send-btn:hover::before {
+            opacity: 1;
+        }
+
+        .premium-send-btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 24px rgba(13, 71, 161, 0.4),
+                        0 4px 12px rgba(13, 71, 161, 0.2),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .premium-send-btn:active {
+            transform: translateY(0) scale(0.98);
+            box-shadow: 0 2px 8px rgba(13, 71, 161, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .premium-send-btn .material-symbols-outlined {
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+            transition: transform 0.3s ease;
+        }
+
+        .premium-send-btn:hover .material-symbols-outlined {
+            transform: translateX(2px);
+        }
+
+        .dark .premium-send-btn {
+            background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+            box-shadow: 0 4px 16px rgba(29, 78, 216, 0.4),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        .dark .premium-send-btn:hover {
+            box-shadow: 0 8px 24px rgba(29, 78, 216, 0.5),
+                        0 4px 12px rgba(29, 78, 216, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        /* Pulse animation for send button when ready */
+        @keyframes pulse-glow {
+            0%, 100% {
+                box-shadow: 0 4px 16px rgba(13, 71, 161, 0.3),
+                            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            }
+            50% {
+                box-shadow: 0 4px 20px rgba(13, 71, 161, 0.5),
+                            0 0 24px rgba(13, 71, 161, 0.2),
+                            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            }
+        }
+
+        .premium-send-btn.has-content {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        /* Icon animations */
+        .premium-icon {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .premium-attach-btn:hover .premium-icon {
+            color: #0D47A1;
+            transform: rotate(-15deg);
+        }
+
+        .dark .premium-attach-btn:hover .premium-icon {
+            color: #60a5fa;
+        }
+
+        /* Input wrapper outer container */
+        .premium-input-wrapper {
+            position: relative;
+            padding: 1rem;
+            background: linear-gradient(180deg, rgba(13, 71, 161, 0.02) 0%, transparent 100%);
+            border-radius: 2rem;
+        }
+
+        .dark .premium-input-wrapper {
+            background: linear-gradient(180deg, rgba(96, 165, 250, 0.03) 0%, transparent 100%);
+        }
+
+        /* Premium Chat Message Styling */
+        .user-message {
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .user-message-bubble {
+            background: linear-gradient(135deg, #0D47A1 0%, #1565C0 100%);
+            box-shadow: 0 4px 16px rgba(13, 71, 161, 0.25),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .user-message-bubble:hover {
+            box-shadow: 0 6px 20px rgba(13, 71, 161, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .ai-response-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(13, 71, 161, 0.1);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.4s ease-out;
+        }
+
+        .dark .ai-response-card {
+            background: rgba(30, 30, 30, 0.7);
+            border-color: rgba(96, 165, 250, 0.15);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .ai-response-card:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            border-color: rgba(13, 71, 161, 0.2);
+        }
+
+        .dark .ai-response-card:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            border-color: rgba(96, 165, 250, 0.25);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card-header-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, rgba(13, 71, 161, 0.1) 0%, rgba(96, 165, 250, 0.1) 100%);
+            border-radius: 6px;
+            margin-right: 8px;
+        }
+
+        .dark .card-header-icon {
+            background: linear-gradient(135deg, rgba(96, 165, 250, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%);
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            font-size: 0.9375rem;
+            color: #0D47A1;
+            margin-bottom: 0.75rem;
+        }
+
+        .dark .section-title {
+            color: #60a5fa;
+        }
+
+        .content-text {
+            font-size: 0.9rem;
+            line-height: 1.7;
+            color: #374151;
+        }
+
+        .dark .content-text {
+            color: #d1d5db;
+        }
+
+        /* Better spacing for conversation view */
+        #chat-conversation-view {
+            padding: 1.5rem 1rem;
+        }
+
+        @media (min-width: 768px) {
+            #chat-conversation-view {
+                padding: 2rem 2rem;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            #chat-conversation-view {
+                padding: 2.5rem 3rem;
             }
         }
     </style>
@@ -537,20 +851,23 @@ No recent chats
 <div class="hidden flex-1 overflow-y-auto pb-4 px-4 relative z-10" id="chat-conversation-view">
 </div>
 <div class="mt-auto p-6 md:p-8 lg:p-12 pt-4 relative z-10">
-<div class="relative">
-<textarea class="w-full py-4 pl-16 pr-24 bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary focus:outline-none resize-none min-h-[56px]" id="chat-input" placeholder="Ask a question or upload a file..." rows="1"></textarea>
-<div class="absolute left-3 top-1/2 -translate-y-1/2 z-20">
-<button class="p-2 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-blue-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-<label class="cursor-pointer" for="file-upload">
-<span class="material-symbols-outlined text-xl">attach_file</span>
+<div class="premium-input-wrapper">
+<div class="premium-input-container" id="input-container">
+<div class="relative flex items-center gap-3 p-3">
+<!-- Attach File Button -->
+<button class="premium-attach-btn p-2.5 flex-shrink-0 z-20">
+<label class="cursor-pointer flex items-center justify-center" for="file-upload">
+<span class="material-symbols-outlined text-xl premium-icon text-gray-600 dark:text-gray-400">attach_file</span>
 </label>
 <input class="hidden" id="file-upload" type="file" accept=".csv,.xlsx,.xls"/>
 </button>
-</div>
-<div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center space-x-2 z-20">
-<button id="send-btn" class="bg-primary text-white w-12 h-12 rounded-lg flex items-center justify-center hover:bg-blue-800 transition-colors shadow-md">
+<!-- Textarea -->
+<textarea class="premium-textarea flex-1 py-2.5 px-1 max-h-32 overflow-y-auto" id="chat-input" placeholder="Ask a question or upload a file..." rows="1"></textarea>
+<!-- Send Button -->
+<button id="send-btn" class="premium-send-btn text-white w-12 h-12 flex-shrink-0 flex items-center justify-center z-20">
 <span class="material-symbols-outlined text-xl">send</span>
 </button>
+</div>
 </div>
 </div>
 </div>
@@ -581,9 +898,6 @@ No recent chats
           sidebar.classList.add('sidebar-collapsed');
         }
 
-        // Set initial icon
-        updateToggleIcon();
-
         // Update toggle button icon
         function updateToggleIcon() {
           const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
@@ -593,7 +907,10 @@ No recent chats
           }
         }
 
-        // Toggle function
+        // Set initial icon
+        updateToggleIcon();
+
+        // Toggle function with smooth animation
         function toggleSidebar() {
           const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
           const mobile = isMobile();
@@ -632,6 +949,7 @@ No recent chats
           if (isMobile()) {
             sidebar.classList.add('sidebar-collapsed');
             sidebarBackdrop.classList.remove('active');
+            updateToggleIcon();
           }
         });
 
@@ -696,9 +1014,17 @@ No recent chats
                   visualizations: document.createElement('div')
                 };
 
-                // Style the containers
-                containers.initial_response.className = 'p-4 mb-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-gray-700 relative z-10';
-                containers.initial_response.innerHTML = '<h3 class="font-semibold mb-2 text-primary">Analysis</h3><pre class="whitespace-pre-wrap text-sm leading-relaxed"></pre>';
+                // Style the containers with premium design
+                containers.initial_response.className = 'ai-response-card p-5 mb-4 rounded-xl relative z-10';
+                containers.initial_response.innerHTML = `
+                  <div class="section-title">
+                    <span class="card-header-icon">
+                      <span class="material-symbols-outlined text-sm text-primary dark:text-blue-300">analytics</span>
+                    </span>
+                    Analysis
+                  </div>
+                  <pre class="content-text whitespace-pre-wrap"></pre>
+                `;
 
                 containers.generated_code.className = 'mb-4 relative z-10';
                 containers.generated_code.innerHTML = `
@@ -716,11 +1042,27 @@ No recent chats
                   </div>
                 `;
 
-                containers.result_commentary.className = 'p-4 mb-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-gray-700 relative z-10';
-                containers.result_commentary.innerHTML = '<h3 class="font-semibold mb-2 text-primary">Results & Commentary</h3><pre class="whitespace-pre-wrap text-sm leading-relaxed"></pre>';
+                containers.result_commentary.className = 'ai-response-card p-5 mb-4 rounded-xl relative z-10';
+                containers.result_commentary.innerHTML = `
+                  <div class="section-title">
+                    <span class="card-header-icon">
+                      <span class="material-symbols-outlined text-sm text-primary dark:text-blue-300">check_circle</span>
+                    </span>
+                    Results & Commentary
+                  </div>
+                  <pre class="content-text whitespace-pre-wrap"></pre>
+                `;
 
-                containers.visualizations.className = 'p-4 mb-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-gray-700 relative z-10 hidden';
-                containers.visualizations.innerHTML = '<h3 class="font-semibold mb-2 text-primary">Visualizations</h3><div class="viz-container space-y-4"></div>';
+                containers.visualizations.className = 'ai-response-card p-5 mb-4 rounded-xl relative z-10 hidden';
+                containers.visualizations.innerHTML = `
+                  <div class="section-title">
+                    <span class="card-header-icon">
+                      <span class="material-symbols-outlined text-sm text-primary dark:text-blue-300">bar_chart</span>
+                    </span>
+                    Visualizations
+                  </div>
+                  <div class="viz-container space-y-4"></div>
+                `;
 
                 convoView.appendChild(containers.initial_response);
                 convoView.appendChild(containers.generated_code);
@@ -819,9 +1161,9 @@ No recent chats
 
           // Create user message container
           const userMessageDiv = document.createElement('div');
-          userMessageDiv.className = 'mb-6 flex justify-end relative z-10';
+          userMessageDiv.className = 'mb-6 flex justify-end relative z-10 user-message';
           userMessageDiv.innerHTML = `
-            <div class="max-w-xs lg:max-w-md px-4 py-3 bg-primary text-white rounded-lg shadow-md">
+            <div class="user-message-bubble max-w-xs lg:max-w-md px-5 py-3.5 text-white rounded-2xl">
               <p class="text-sm leading-relaxed">${message}</p>
             </div>
           `;
@@ -902,13 +1244,19 @@ No recent chats
 
               // Create a div for this visualization
               const vizDiv = document.createElement('div');
-              vizDiv.className = 'mb-6 p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 relative z-10';
+              vizDiv.className = 'mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 relative z-10';
+              vizDiv.style.animation = 'fadeInUp 0.4s ease-out';
               vizDiv.id = 'plot_' + Math.random().toString(36).substr(2, 9);
 
-              // Add title
-              const title = document.createElement('h4');
-              title.className = 'text-sm font-medium mb-3 text-gray-700 dark:text-gray-300';
-              title.textContent = key.replace('plotly_figure_', '').replace('_', ' ').toUpperCase();
+              // Add title with icon
+              const title = document.createElement('div');
+              title.className = 'flex items-center text-sm font-medium mb-3 text-gray-700 dark:text-gray-300';
+              title.innerHTML = `
+                <span class="card-header-icon mr-2">
+                  <span class="material-symbols-outlined text-xs text-primary dark:text-blue-300">show_chart</span>
+                </span>
+                ${key.replace('plotly_figure_', '').replace(/_/g, ' ').toUpperCase()}
+              `;
               vizDiv.appendChild(title);
 
               // Add plot container
@@ -954,6 +1302,39 @@ No recent chats
             uploadFile(file);
           }
         });
+
+        // Premium Input Enhancements
+        const inputContainer = document.getElementById('input-container');
+
+        // Auto-resize textarea
+        input.addEventListener('input', function() {
+          this.style.height = 'auto';
+          this.style.height = Math.min(this.scrollHeight, 128) + 'px'; // max 128px (max-h-32)
+
+          // Toggle pulse animation on send button when content exists
+          if (this.value.trim()) {
+            sendBtn.classList.add('has-content');
+          } else {
+            sendBtn.classList.remove('has-content');
+          }
+        });
+
+        // Focus/blur effects for input container
+        input.addEventListener('focus', () => {
+          inputContainer.classList.add('focused');
+        });
+
+        input.addEventListener('blur', () => {
+          inputContainer.classList.remove('focused');
+        });
+
+        // Reset textarea height after sending
+        const originalSendMessage = sendMessage;
+        sendMessage = function() {
+          originalSendMessage();
+          input.style.height = 'auto';
+          sendBtn.classList.remove('has-content');
+        };
 
         // Load existing file info on page load
         fetch('/file-info')
