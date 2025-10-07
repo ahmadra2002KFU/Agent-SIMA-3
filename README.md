@@ -22,6 +22,7 @@ A comprehensive local LLM-powered chatbot web interface with advanced file proce
 - **Session persistence** for user preferences and rules
 - **Complete API ecosystem** for programmatic access
 - **Professional branding** with integrated AI Sima logo and consistent visual identity
+- **Skeleton loader animations** for polished loading states during code execution
 
 ## 🚀 Quick Start
 
@@ -101,27 +102,27 @@ If LM Studio isn’t running, you’ll see a fallback message; streaming still w
 
 The system processes user queries through three distinct layers, with an optimized output format that prioritizes code visibility and provides clear, prominent results.
 
-#### Output Display Order (NEW in v2.2.0)
+#### Output Display Order (Updated in v2.3.1)
 
 Responses are displayed in the following optimized sequence:
 
-1. **Python Code Block** (FIRST)
+1. **Analysis** (FIRST)
+   - LLM's explanation of the approach
+   - Methodology description
+   - Provides context before showing implementation
+   - Educational insights
+
+2. **Python Code Block** (SECOND)
    - Generated code with syntax highlighting
    - Copy-to-clipboard functionality
    - Shows the exact analysis approach
    - Helps users learn data analysis techniques
 
-2. **Plot/Visualization** (SECOND, conditional)
+3. **Plot/Visualization** (THIRD, conditional)
    - Interactive Plotly charts
    - Only displayed when visualizations are generated
    - Professional styling with responsive design
    - Reduces clutter when not needed
-
-3. **Analysis** (THIRD)
-   - LLM's explanation of the approach
-   - Methodology description
-   - Assumptions and transformations
-   - Educational insights
 
 4. **Results Block** (FOURTH, NEW)
    - **Prominent display** of the final answer
@@ -129,6 +130,7 @@ Responses are displayed in the following optimized sequence:
    - Automatically extracts primary result (`result`, `output`, `summary`, etc.)
    - Smart number formatting with locale support
    - Visually distinct from commentary
+   - Skeleton loader animation during code execution
 
 5. **Commentary** (FIFTH)
    - Additional context and interpretation

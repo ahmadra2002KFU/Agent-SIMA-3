@@ -422,7 +422,8 @@ async def ws_endpoint(ws: WebSocket) -> None:
                     # Step 2: Execute generated code if any
                     execution_results = None
                     if field_content.get("generated_code", "").strip():
-                        await ws.send_json({"event": "delta", "field": "result_commentary", "delta": "Executing generated code..."})
+                        # Removed status message - skeleton loader handles visual feedback
+                        # await ws.send_json({"event": "delta", "field": "result_commentary", "delta": "Executing generated code..."})
 
                         # Get current dataframe if available
                         current_file = file_handler.current_file
@@ -442,9 +443,9 @@ async def ws_endpoint(ws: WebSocket) -> None:
                                 "executed_code": field_content["generated_code"]  # Include the actual code that was executed
                             }
 
-                            # Send execution status
-                            status_msg = "Code executed successfully. " if success else f"Code execution failed: {output[:100]}... "
-                            await ws.send_json({"event": "delta", "field": "result_commentary", "delta": status_msg})
+                            # Removed status message - skeleton loader handles visual feedback
+                            # status_msg = "Code executed successfully. " if success else f"Code execution failed: {output[:100]}... "
+                            # await ws.send_json({"event": "delta", "field": "result_commentary", "delta": status_msg})
                         except Exception as e:
                             logger.error(f"Code execution error: {str(e)}", exc_info=True)
                             execution_results = {

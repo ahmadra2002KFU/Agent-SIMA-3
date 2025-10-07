@@ -2,6 +2,119 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.1] - 2025-01-28 - Analysis Position Reverted
+
+### 🔄 Display Order Adjustment
+
+**CHANGED**: Moved Analysis section back to the first position, before Python Code block.
+
+### ✨ New Output Order
+
+The display order has been adjusted based on user feedback:
+
+1. **Analysis** (FIRST) - LLM explains the approach and methodology
+2. **Python Code Block** (SECOND) - Generated code for execution
+3. **Visualizations** (THIRD, conditional) - Charts and graphs when generated
+4. **Results Block** (FOURTH) - Prominent display of final answer
+5. **Commentary** (FIFTH) - Additional insights and context
+
+### 🎯 Rationale
+
+- **Context First**: Users see the explanation before the implementation
+- **Better Understanding**: Analysis provides context for the code that follows
+- **Improved Learning**: Understanding the approach before seeing the code
+- **User Preference**: Based on direct user feedback
+
+### 🔧 Technical Changes
+
+**Frontend Changes (index.html):**
+- Reordered container creation (lines 1066-1116)
+- Updated appendChild sequence (lines 1151-1156)
+- Updated comments to reflect new order
+
+### 🔄 Backward Compatibility
+
+- ✅ No breaking changes to backend or API
+- ✅ All existing functionality preserved
+- ✅ Skeleton loader still works correctly
+- ✅ Results Block behavior unchanged
+
+---
+
+## [2.3.0] - 2025-01-28 - Skeleton Loader for Code Execution
+
+### 🎨 UX Enhancement: Professional Loading Animation
+
+**IMPLEMENTED**: Replaced plain text status messages with an elegant skeleton loader animation during code execution, providing a more polished and professional user experience.
+
+### ✨ New Features
+
+**Skeleton Loader Animation:**
+- **Shimmer Effect**: Smooth, continuous animation that indicates active processing
+- **Gradient Background**: Matches the Results Block styling for visual consistency
+- **Automatic Display**: Shows immediately when code execution starts
+- **Seamless Transition**: Smoothly replaced by actual results when execution completes
+- **Dark Mode Support**: Optimized animation for both light and dark themes
+
+### 🔧 Technical Implementation
+
+**Removed:**
+- ❌ Plain text message: "Executing generated code..." (frontend + backend)
+- ❌ Plain text message: "Code executed successfully." (frontend + backend)
+
+**Added:**
+- ✅ CSS `@keyframes shimmer` animation with gradient background
+- ✅ Skeleton loader container with two animated bars (value + label placeholders)
+- ✅ Automatic show/hide logic in `handleFinalResponse()` function
+- ✅ Error handling to hide skeleton on execution failures
+
+**Frontend Changes (index.html):**
+- Added skeleton loader CSS with shimmer animation (lines 304-359)
+- Updated Results Block HTML structure with skeleton and actual results containers
+- Modified `handleFinalResponse()` to show skeleton during execution
+- Updated `displayResultsBlock()` to hide skeleton and show actual results
+- Implemented proper error handling to clean up skeleton on failures
+
+**Backend Changes (server/app.py):**
+- Commented out WebSocket delta message for "Executing generated code..." (line 425)
+- Commented out WebSocket delta message for "Code executed successfully." (lines 446-447)
+- Prevents status text from appearing in Commentary section
+- Skeleton loader now provides all visual feedback without text pollution
+
+### 📊 User Experience Improvements
+
+**Before:**
+```
+[Plain text] "Executing generated code..."
+[Wait...]
+[Plain text] "Code executed successfully."
+[Results appear]
+```
+
+**After:**
+```
+[Animated skeleton with shimmer effect appears]
+[Smooth loading animation...]
+[Skeleton fades out, results fade in]
+```
+
+### 🎯 Benefits
+
+- **Professional Appearance**: Modern skeleton loader matches industry-standard UX patterns
+- **Improved Perceived Performance**: Visual feedback reduces perceived wait time
+- **Better Visual Hierarchy**: Skeleton matches Results Block dimensions and styling
+- **Reduced Cognitive Load**: No need to read status messages, visual animation is self-explanatory
+- **Consistent Branding**: Gradient colors match the AI Sima design system
+
+### 🔄 Backward Compatibility
+
+- ✅ No breaking changes to backend or API
+- ✅ Graceful degradation if JavaScript fails
+- ✅ Maintains all existing functionality
+- ✅ Error handling ensures clean UI state
+
+---
+
 ## [2.2.0] - 2025-01-28 - Enhanced Output Format and Display Order
 
 ### 🎯 Revolutionary UI/UX Improvement: Code-First Display Architecture

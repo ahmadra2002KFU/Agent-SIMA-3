@@ -300,6 +300,65 @@
             color: #7c3aed;
         }
 
+        /* Skeleton Loader Animation */
+        @keyframes shimmer {
+            0% {
+                background-position: -1000px 0;
+            }
+            100% {
+                background-position: 1000px 0;
+            }
+        }
+
+        .skeleton-loader {
+            animation: shimmer 2s infinite linear;
+            background: linear-gradient(
+                to right,
+                #f0f4f8 0%,
+                #e2e8f0 20%,
+                #f0f4f8 40%,
+                #f0f4f8 100%
+            );
+            background-size: 1000px 100%;
+            border-radius: 0.5rem;
+        }
+
+        .dark .skeleton-loader {
+            background: linear-gradient(
+                to right,
+                #1e293b 0%,
+                #334155 20%,
+                #1e293b 40%,
+                #1e293b 100%
+            );
+            background-size: 1000px 100%;
+        }
+
+        .skeleton-results-container {
+            background: linear-gradient(to br, #eff6ff, #e0e7ff);
+            border: 2px solid #0D47A1;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .dark .skeleton-results-container {
+            background: linear-gradient(to br, #1f2937, #111827);
+            border-color: #60a5fa;
+        }
+
+        .skeleton-value {
+            height: 3rem;
+            width: 60%;
+            margin-bottom: 0.75rem;
+        }
+
+        .skeleton-label {
+            height: 1rem;
+            width: 40%;
+        }
+        }
+
         .token.function,
         .token.class-name {
             color: #0891b2;
@@ -1006,7 +1065,7 @@ No recent chats
               const msg = JSON.parse(ev.data);
               if(msg.event === 'start'){
                 // Don't switch views here - user message display already handled this
-                // Create containers for the 5 fields (new order: code, viz, analysis, results, commentary)
+                // Create containers for the 5 fields (new order: analysis, code, viz, results, commentary)
                 containers = {
                   generated_code: document.createElement('div'),
                   visualizations: document.createElement('div'),
@@ -1015,7 +1074,19 @@ No recent chats
                   result_commentary: document.createElement('div')
                 };
 
-                // 1. Python Code Block (displayed FIRST)
+                // 1. Analysis (displayed FIRST)
+                containers.initial_response.className = 'ai-response-card p-5 mb-4 rounded-xl relative z-10';
+                containers.initial_response.innerHTML = `
+                  <div class="section-title">
+                    <span class="card-header-icon">
+                      <span class="material-symbols-outlined text-sm text-primary dark:text-blue-300">analytics</span>
+                    </span>
+                    Analysis
+                  </div>
+                  <pre class="content-text whitespace-pre-wrap"></pre>
+                `;
+
+                // 2. Python Code Block (displayed SECOND)
                 containers.generated_code.className = 'mb-4 relative z-10';
                 containers.generated_code.innerHTML = `
                   <div class="code-block-container">
@@ -1032,7 +1103,7 @@ No recent chats
                   </div>
                 `;
 
-                // 2. Visualizations (displayed SECOND, conditionally)
+                // 3. Visualizations (displayed THIRD, conditionally)
                 containers.visualizations.className = 'ai-response-card p-5 mb-4 rounded-xl relative z-10 hidden';
                 containers.visualizations.innerHTML = `
                   <div class="section-title">
@@ -1044,18 +1115,6 @@ No recent chats
                   <div class="viz-container space-y-4"></div>
                 `;
 
-                // 3. Analysis (displayed THIRD)
-                containers.initial_response.className = 'ai-response-card p-5 mb-4 rounded-xl relative z-10';
-                containers.initial_response.innerHTML = `
-                  <div class="section-title">
-                    <span class="card-header-icon">
-                      <span class="material-symbols-outlined text-sm text-primary dark:text-blue-300">analytics</span>
-                    </span>
-                    Analysis
-                  </div>
-                  <pre class="content-text whitespace-pre-wrap"></pre>
-                `;
-
                 // 4. Results Block (displayed FOURTH - NEW prominent results display)
                 containers.results_block.className = 'ai-response-card p-6 mb-4 rounded-xl relative z-10 hidden';
                 containers.results_block.innerHTML = `
@@ -1065,7 +1124,13 @@ No recent chats
                     </span>
                     Results
                   </div>
-                  <div class="results-content bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 p-6 rounded-lg border-2 border-primary dark:border-blue-400 mt-3">
+                  <!-- Skeleton Loader (shown during code execution) -->
+                  <div id="results-skeleton" class="skeleton-results-container hidden">
+                    <div class="skeleton-loader skeleton-value"></div>
+                    <div class="skeleton-loader skeleton-label"></div>
+                  </div>
+                  <!-- Actual Results (shown after execution completes) -->
+                  <div id="results-actual" class="results-content bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 p-6 rounded-lg border-2 border-primary dark:border-blue-400 mt-3 hidden">
                     <div class="text-4xl font-bold text-primary dark:text-blue-300 mb-2 font-mono" id="primary-result-value"></div>
                     <div class="text-sm text-gray-600 dark:text-gray-300" id="primary-result-label"></div>
                   </div>
@@ -1083,10 +1148,10 @@ No recent chats
                   <pre class="content-text whitespace-pre-wrap"></pre>
                 `;
 
-                // Append containers in NEW ORDER: Code → Viz → Analysis → Results → Commentary
+                // Append containers in NEW ORDER: Analysis → Code → Viz → Results → Commentary
+                convoView.appendChild(containers.initial_response);
                 convoView.appendChild(containers.generated_code);
                 convoView.appendChild(containers.visualizations);
-                convoView.appendChild(containers.initial_response);
                 convoView.appendChild(containers.results_block);
                 convoView.appendChild(containers.result_commentary);
                 convoView.scrollTop = convoView.scrollHeight;
@@ -1236,6 +1301,16 @@ No recent chats
         function handleFinalResponse(finalResponse) {
           // Check if we need to fetch execution results for visualizations and results block
           if (finalResponse.generated_code && finalResponse.generated_code.trim()) {
+            // Show skeleton loader and Results Block container
+            const resultsBlock = containers.results_block;
+            const skeleton = resultsBlock.querySelector('#results-skeleton');
+            const actualResults = resultsBlock.querySelector('#results-actual');
+
+            // Show the Results Block container and skeleton loader
+            resultsBlock.classList.remove('hidden');
+            skeleton.classList.remove('hidden');
+            actualResults.classList.add('hidden');
+
             // Execute the code to get visualizations and results
             fetch('/execute-code', {
               method: 'POST',
@@ -1244,12 +1319,23 @@ No recent chats
             })
             .then(response => response.json())
             .then(result => {
+              // Hide skeleton loader
+              skeleton.classList.add('hidden');
+
               if (result.status === 'success' && result.results) {
                 displayVisualizations(result.results);
                 displayResultsBlock(result.results);
+              } else {
+                // If execution failed, hide the Results Block entirely
+                resultsBlock.classList.add('hidden');
               }
             })
-            .catch(error => console.error('Error executing code for visualizations:', error));
+            .catch(error => {
+              console.error('Error executing code for visualizations:', error);
+              // Hide skeleton and Results Block on error
+              skeleton.classList.add('hidden');
+              resultsBlock.classList.add('hidden');
+            });
           }
         }
 
@@ -1271,6 +1357,7 @@ No recent chats
           // If we found a primary result, display it prominently
           if (primaryResult !== null && primaryResult !== undefined) {
             const resultsBlock = containers.results_block;
+            const actualResults = resultsBlock.querySelector('#results-actual');
             const valueElement = resultsBlock.querySelector('#primary-result-value');
             const labelElement = resultsBlock.querySelector('#primary-result-label');
 
@@ -1293,8 +1380,13 @@ No recent chats
             valueElement.textContent = displayValue;
             labelElement.textContent = `Primary result from '${primaryResultKey}' variable`;
 
-            // Show the results block
+            // Show the actual results container (skeleton is already hidden by handleFinalResponse)
+            actualResults.classList.remove('hidden');
             resultsBlock.classList.remove('hidden');
+          } else {
+            // No primary result found, hide the entire Results Block
+            const resultsBlock = containers.results_block;
+            resultsBlock.classList.add('hidden');
           }
         }
 
