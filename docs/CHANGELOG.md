@@ -2,6 +2,90 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.0] - 2025-01-28 - Enhanced Output Format and Display Order
+
+### 🎯 Revolutionary UI/UX Improvement: Code-First Display Architecture
+
+**IMPLEMENTED**: Complete redesign of the 3-layer processing system's output format and execution order to prioritize code visibility and provide a prominent Results Block for final answers.
+
+### ✨ New Output Order
+
+The system now displays responses in the following optimized order:
+
+1. **Python Code Block** (FIRST) - Generated code with syntax highlighting and copy functionality
+2. **Plot/Visualization** (SECOND, conditional) - Interactive Plotly charts (only shown when generated)
+3. **Analysis** (THIRD) - LLM's explanation of the approach and methodology
+4. **Results Block** (FOURTH, NEW) - Prominent display of the final answer/output
+5. **Commentary** (FIFTH) - Additional context and interpretation of results
+
+### 🎨 New Results Block Component
+
+**NEW FEATURE**: Dedicated Results Block with premium styling:
+- **Prominent Display**: Large, bold text with gradient background
+- **Automatic Extraction**: Intelligently extracts primary result from execution (`result`, `output`, `summary`, etc.)
+- **Smart Formatting**: Numbers formatted with locale-specific separators and precision
+- **Visual Hierarchy**: Distinct from commentary for immediate answer visibility
+- **Conditional Display**: Only shown when a primary result is available
+
+### 🔧 Technical Implementation
+
+**Frontend Changes (index.html):**
+- Reordered container creation and DOM appending for new visual sequence
+- Added `results_block` container with gradient styling and prominent typography
+- Implemented `displayResultsBlock()` function to extract and format primary results
+- Updated container labels: "Results & Commentary" split into "Results" and "Commentary"
+- Maintained backward compatibility with existing WebSocket streaming
+
+**Backend Changes (server/app.py):**
+- Enhanced SYSTEM_PROMPT to emphasize code-first generation
+- Updated response structure instructions for LLM
+- Added explicit guidance: "Generate Python code FIRST, then provide analysis"
+- Included visualization examples in system prompt
+- Maintained all existing field names for backward compatibility
+
+### 📊 User Experience Improvements
+
+**Before Enhancement:**
+```
+1. Analysis: "I will filter the data for Saudi patients..."
+2. Code: saudi_patients = df[df['Nationality'].str.contains('Saudi')]...
+3. Results & Commentary: "The analysis found 54 Saudi patients. This represents..."
+```
+
+**After Enhancement:**
+```
+1. Code: saudi_patients = df[df['Nationality'].str.contains('Saudi')]...
+2. [Visualization if applicable]
+3. Analysis: "I filtered the Nationality column using string matching..."
+4. Results: 54 (in large, prominent display)
+5. Commentary: "This represents 18% of the total patient population..."
+```
+
+### 🎯 Benefits
+
+- **Immediate Code Visibility**: Users see the generated code first, understanding the approach immediately
+- **Prominent Results**: Final answers displayed in a visually distinct, easy-to-read format
+- **Better Learning**: Code-first approach helps users learn data analysis techniques
+- **Conditional Visualizations**: Charts only appear when relevant, reducing clutter
+- **Clear Separation**: Results and commentary are now distinct sections for better readability
+- **Professional Appearance**: Gradient backgrounds and premium styling for results block
+
+### 🔄 Backward Compatibility
+
+- All existing WebSocket message formats maintained
+- No changes to backend streaming logic
+- Field names unchanged (`initial_response`, `generated_code`, `result_commentary`)
+- Existing functionality fully preserved
+- Only visual presentation order modified
+
+### 📈 Impact
+
+- **Enhanced Clarity**: Users immediately see what code will be executed
+- **Better Transparency**: Code-first approach builds trust in AI-generated analysis
+- **Improved Accessibility**: Large, bold results are easier to read and understand
+- **Professional UX**: Premium styling matches modern data analysis tools
+- **Flexible Display**: Conditional sections reduce visual noise
+
 ## [2.1.5] - 2025-01-28 - Sidebar Toggle Functionality
 
 ### 🎛️ Enhanced User Interface with Collapsible Sidebar

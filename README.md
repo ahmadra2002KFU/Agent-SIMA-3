@@ -99,6 +99,43 @@ If LM Studio isn’t running, you’ll see a fallback message; streaming still w
 
 ### 3-Layer Processing System
 
+The system processes user queries through three distinct layers, with an optimized output format that prioritizes code visibility and provides clear, prominent results.
+
+#### Output Display Order (NEW in v2.2.0)
+
+Responses are displayed in the following optimized sequence:
+
+1. **Python Code Block** (FIRST)
+   - Generated code with syntax highlighting
+   - Copy-to-clipboard functionality
+   - Shows the exact analysis approach
+   - Helps users learn data analysis techniques
+
+2. **Plot/Visualization** (SECOND, conditional)
+   - Interactive Plotly charts
+   - Only displayed when visualizations are generated
+   - Professional styling with responsive design
+   - Reduces clutter when not needed
+
+3. **Analysis** (THIRD)
+   - LLM's explanation of the approach
+   - Methodology description
+   - Assumptions and transformations
+   - Educational insights
+
+4. **Results Block** (FOURTH, NEW)
+   - **Prominent display** of the final answer
+   - Large, bold typography with gradient background
+   - Automatically extracts primary result (`result`, `output`, `summary`, etc.)
+   - Smart number formatting with locale support
+   - Visually distinct from commentary
+
+5. **Commentary** (FIFTH)
+   - Additional context and interpretation
+   - Insights about the findings
+   - Recommendations and next steps
+   - Separated from results for clarity
+
 #### Layer 1: Metadata Extraction
 - **Purpose**: Comprehensive analysis of uploaded files
 - **Features**:
@@ -116,6 +153,7 @@ If LM Studio isn’t running, you’ll see a fallback message; streaming still w
   - Security validation
   - Timeout protection
   - Result capture and serialization
+  - **Code-first generation** (prioritizes showing code before analysis)
 
 #### Layer 3: Results Commentary
 - **Purpose**: Natural language interpretation of analysis results
@@ -124,6 +162,7 @@ If LM Studio isn’t running, you’ll see a fallback message; streaming still w
   - Context-aware commentary
   - Integration with user-defined rules
   - Actionable insights generation
+  - **Split display**: Results Block + Commentary for better readability
 
 ### Technology Stack
 
@@ -203,11 +242,37 @@ Agent-SIMA-3/
 2. **Add custom rules**: Define analysis preferences in the sidebar
 3. **Toggle sidebar**: Use the hamburger menu or Ctrl/Cmd+B to optimize your workspace
 4. **Chat with AI**: Ask questions about your data
-5. **View results**: See real-time streaming responses with:
-   - Initial analysis
-   - Generated Python code
-   - Interactive visualizations
-   - Natural language commentary
+5. **View results**: See real-time streaming responses in optimized order:
+   - **Python Code** - See the generated code first
+   - **Visualizations** - Interactive charts (when applicable)
+   - **Analysis** - Explanation of the approach
+   - **Results** - Prominent display of the final answer
+   - **Commentary** - Additional insights and context
+
+### Example Workflow
+
+**Query**: "How many Saudi patients are there?"
+
+**Response Display**:
+
+1. **Code Block**:
+```python
+saudi_patients = df[df['Nationality'].str.contains('Saudi', case=False, na=False)]
+result = len(saudi_patients)
+```
+
+2. **Visualization**: _(Skipped - no chart needed for simple count)_
+
+3. **Analysis**: "I filtered the Nationality column using string matching to identify all patients with 'Saudi' nationality, ensuring case-insensitive matching and handling missing values."
+
+4. **Results Block**:
+```
+54
+Primary result from 'result' variable
+```
+_(Displayed in large, bold text with gradient background)_
+
+5. **Commentary**: "This represents 18% of the total patient population in the dataset. The analysis found patients across multiple departments with varying admission dates."
 
 ## 🆘 Troubleshooting
 

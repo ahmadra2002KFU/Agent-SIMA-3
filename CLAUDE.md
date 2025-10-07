@@ -20,6 +20,8 @@ pip install fastapi uvicorn[standard] pandas openpyxl plotly requests aiofiles w
 ```
 
 ### Running the Application
+
+#### Main Application (Python/FastAPI)
 ```bash
 # Start the server (from project root)
 cd server
@@ -30,8 +32,31 @@ Run.bat                    # Opens browser automatically
 Run.bat --no-open         # Skip browser auto-open
 ```
 
+#### Alternative Frontend (chatty-local-glow)
+A React/TypeScript/Vite frontend with ShadCN UI components exists in `chatty-local-glow/`:
+```bash
+# Navigate to the directory
+cd chatty-local-glow
+
+# Install dependencies (if needed)
+npm install
+
+# Run development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+```
+This frontend uses: React 18, TypeScript, Vite, ShadCN UI, Tailwind CSS, React Router, TanStack Query, and various Radix UI components.
+
 ### Testing
 ```bash
+# All test files are in the "testing stuff" directory
+cd "testing stuff"
+
 # Run comprehensive test suite
 python test_comprehensive_suite.py
 
@@ -42,6 +67,8 @@ python test_rules_system.py        # Test rules management
 python test_frontend_integration.py # Test frontend integration
 python test_send_button.py         # Test send button functionality
 python test_new_architecture.py    # Test validation/serialization/streaming architecture
+python test_live_backend.py        # Test against running backend
+python test_running_server.py      # Test running server
 ```
 
 ## Architecture Overview
@@ -140,12 +167,22 @@ Messages follow a structured JSON format with streaming support:
 ### Data Files
 - Sample datasets in root: `hospital_patients.csv`, `comprehensive_test_data.csv`
 - Uploaded files stored in `uploads/` directory
-- Configuration persisted in `config/rules.json`
+- Configuration persisted in `config/rules.json` and `server/config/rules.json`
 
 ### Frontend Resources
-- Single-page application: `index.html`
-- Uses CDN resources: Tailwind CSS, Material Icons, Plotly 2.30.1
-- WebSocket connection management with automatic reconnection
+- **Primary Frontend**: Single-page application in root `index.html`
+  - Uses CDN resources: Tailwind CSS, Material Icons, Plotly 2.30.1
+  - WebSocket connection management with automatic reconnection
+- **Alternative Frontend**: React/TypeScript SPA in `chatty-local-glow/`
+  - Modern component-based architecture with ShadCN UI
+  - Vite build system for fast development
+
+### Directory Structure
+- `server/`: Python FastAPI backend application
+- `chatty-local-glow/`: React/TypeScript alternative frontend (untracked in git)
+- `testing stuff/`: All test files and test utilities
+- `uploads/`: File upload storage
+- `config/`: Configuration files
 
 ## LM Studio Integration
 
@@ -267,3 +304,9 @@ The system prompt in `app.py` (lines 50-95) is critical for proper LLM behavior:
 - Requires assignment to `result`/`output`/`fig` variables
 - Defines the 3-layer response structure
 - This prompt should be modified carefully as it affects all LLM-generated code
+
+### Batch Scripts (Windows)
+- **`Run.bat`**: Starts the server with environment validation
+  - Checks for virtual environment and LM Studio availability
+  - Auto-opens browser by default (use `--no-open` to skip)
+  - Provides helpful error messages for missing dependencies

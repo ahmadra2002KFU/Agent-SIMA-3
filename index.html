@@ -1006,26 +1006,16 @@ No recent chats
               const msg = JSON.parse(ev.data);
               if(msg.event === 'start'){
                 // Don't switch views here - user message display already handled this
-                // Create containers for the 3 fields
+                // Create containers for the 5 fields (new order: code, viz, analysis, results, commentary)
                 containers = {
-                  initial_response: document.createElement('div'),
                   generated_code: document.createElement('div'),
-                  result_commentary: document.createElement('div'),
-                  visualizations: document.createElement('div')
+                  visualizations: document.createElement('div'),
+                  initial_response: document.createElement('div'),
+                  results_block: document.createElement('div'),
+                  result_commentary: document.createElement('div')
                 };
 
-                // Style the containers with premium design
-                containers.initial_response.className = 'ai-response-card p-5 mb-4 rounded-xl relative z-10';
-                containers.initial_response.innerHTML = `
-                  <div class="section-title">
-                    <span class="card-header-icon">
-                      <span class="material-symbols-outlined text-sm text-primary dark:text-blue-300">analytics</span>
-                    </span>
-                    Analysis
-                  </div>
-                  <pre class="content-text whitespace-pre-wrap"></pre>
-                `;
-
+                // 1. Python Code Block (displayed FIRST)
                 containers.generated_code.className = 'mb-4 relative z-10';
                 containers.generated_code.innerHTML = `
                   <div class="code-block-container">
@@ -1042,17 +1032,7 @@ No recent chats
                   </div>
                 `;
 
-                containers.result_commentary.className = 'ai-response-card p-5 mb-4 rounded-xl relative z-10';
-                containers.result_commentary.innerHTML = `
-                  <div class="section-title">
-                    <span class="card-header-icon">
-                      <span class="material-symbols-outlined text-sm text-primary dark:text-blue-300">check_circle</span>
-                    </span>
-                    Results & Commentary
-                  </div>
-                  <pre class="content-text whitespace-pre-wrap"></pre>
-                `;
-
+                // 2. Visualizations (displayed SECOND, conditionally)
                 containers.visualizations.className = 'ai-response-card p-5 mb-4 rounded-xl relative z-10 hidden';
                 containers.visualizations.innerHTML = `
                   <div class="section-title">
@@ -1064,9 +1044,50 @@ No recent chats
                   <div class="viz-container space-y-4"></div>
                 `;
 
-                convoView.appendChild(containers.initial_response);
+                // 3. Analysis (displayed THIRD)
+                containers.initial_response.className = 'ai-response-card p-5 mb-4 rounded-xl relative z-10';
+                containers.initial_response.innerHTML = `
+                  <div class="section-title">
+                    <span class="card-header-icon">
+                      <span class="material-symbols-outlined text-sm text-primary dark:text-blue-300">analytics</span>
+                    </span>
+                    Analysis
+                  </div>
+                  <pre class="content-text whitespace-pre-wrap"></pre>
+                `;
+
+                // 4. Results Block (displayed FOURTH - NEW prominent results display)
+                containers.results_block.className = 'ai-response-card p-6 mb-4 rounded-xl relative z-10 hidden';
+                containers.results_block.innerHTML = `
+                  <div class="section-title">
+                    <span class="card-header-icon">
+                      <span class="material-symbols-outlined text-sm text-primary dark:text-blue-300">check_circle</span>
+                    </span>
+                    Results
+                  </div>
+                  <div class="results-content bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 p-6 rounded-lg border-2 border-primary dark:border-blue-400 mt-3">
+                    <div class="text-4xl font-bold text-primary dark:text-blue-300 mb-2 font-mono" id="primary-result-value"></div>
+                    <div class="text-sm text-gray-600 dark:text-gray-300" id="primary-result-label"></div>
+                  </div>
+                `;
+
+                // 5. Commentary (displayed FIFTH)
+                containers.result_commentary.className = 'ai-response-card p-5 mb-4 rounded-xl relative z-10';
+                containers.result_commentary.innerHTML = `
+                  <div class="section-title">
+                    <span class="card-header-icon">
+                      <span class="material-symbols-outlined text-sm text-primary dark:text-blue-300">description</span>
+                    </span>
+                    Commentary
+                  </div>
+                  <pre class="content-text whitespace-pre-wrap"></pre>
+                `;
+
+                // Append containers in NEW ORDER: Code → Viz → Analysis → Results → Commentary
                 convoView.appendChild(containers.generated_code);
                 convoView.appendChild(containers.visualizations);
+                convoView.appendChild(containers.initial_response);
+                convoView.appendChild(containers.results_block);
                 convoView.appendChild(containers.result_commentary);
                 convoView.scrollTop = convoView.scrollHeight;
               } else if(msg.event === 'delta' && containers && msg.field && msg.delta){
@@ -1213,9 +1234,9 @@ No recent chats
         }
 
         function handleFinalResponse(finalResponse) {
-          // Check if we need to fetch execution results for visualizations
+          // Check if we need to fetch execution results for visualizations and results block
           if (finalResponse.generated_code && finalResponse.generated_code.trim()) {
-            // Execute the code to get visualizations
+            // Execute the code to get visualizations and results
             fetch('/execute-code', {
               method: 'POST',
               headers: {'Content-Type': 'application/json'},
@@ -1225,9 +1246,55 @@ No recent chats
             .then(result => {
               if (result.status === 'success' && result.results) {
                 displayVisualizations(result.results);
+                displayResultsBlock(result.results);
               }
             })
             .catch(error => console.error('Error executing code for visualizations:', error));
+          }
+        }
+
+        function displayResultsBlock(results) {
+          // Extract primary result from execution results
+          let primaryResult = null;
+          let primaryResultKey = null;
+
+          // Look for the main result variable in priority order
+          const priorityKeys = ['result', 'output', 'summary', 'analysis', 'answer'];
+          for (const key of priorityKeys) {
+            if (results.hasOwnProperty(key) && results[key] !== null && results[key] !== undefined) {
+              primaryResult = results[key];
+              primaryResultKey = key;
+              break;
+            }
+          }
+
+          // If we found a primary result, display it prominently
+          if (primaryResult !== null && primaryResult !== undefined) {
+            const resultsBlock = containers.results_block;
+            const valueElement = resultsBlock.querySelector('#primary-result-value');
+            const labelElement = resultsBlock.querySelector('#primary-result-label');
+
+            // Format the result value
+            let displayValue = primaryResult;
+            if (typeof primaryResult === 'number') {
+              // Format numbers nicely
+              displayValue = primaryResult.toLocaleString(undefined, {
+                maximumFractionDigits: 2
+              });
+            } else if (typeof primaryResult === 'object') {
+              // For objects/arrays, show a summary
+              if (Array.isArray(primaryResult)) {
+                displayValue = `${primaryResult.length} items`;
+              } else {
+                displayValue = JSON.stringify(primaryResult, null, 2);
+              }
+            }
+
+            valueElement.textContent = displayValue;
+            labelElement.textContent = `Primary result from '${primaryResultKey}' variable`;
+
+            // Show the results block
+            resultsBlock.classList.remove('hidden');
           }
         }
 
