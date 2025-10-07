@@ -17,6 +17,82 @@ from rules_manager import rules_manager
 
 logger = logging.getLogger(__name__)
 
+CONTEXT_TRUNCATION_SUFFIX = "... [truncated]"
+ANALYSIS_SECTION_LIMIT = 2000
+CODE_SECTION_LIMIT = 6000
+OUTPUT_SECTION_LIMIT = 2000
+RESULT_SECTION_LIMIT = 2000
+
+def _truncate_for_context(value: Any, limit: int) -> str:
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        value = str(value)
+    value = value.strip()
+    if len(value) <= limit:
+        return value
+    return value[:limit] + CONTEXT_TRUNCATION_SUFFIX
+
+def _stringify_for_context(value: Any, limit: int) -> str:
+    if isinstance(value, (dict, list)):
+        try:
+            text_value = json.dumps(value, indent=2, default=str)
+        except Exception:
+            text_value = str(value)
+    else:
+        text_value = str(value)
+    return _truncate_for_context(text_value, limit)
+
+def _sanitize_execution_results_for_commentary(execution_results: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(execution_results, dict):
+        return {}
+    sanitized: Dict[str, Any] = {}
+    if "success" in execution_results:
+        sanitized["success"] = execution_results.get("success")
+    output_value = execution_results.get("output")
+    if output_value:
+        sanitized["output"] = _stringify_for_context(output_value, OUTPUT_SECTION_LIMIT)
+    results = execution_results.get("results")
+    if isinstance(results, dict):
+        summarized_results: Dict[str, Any] = {}
+        for key, value in results.items():
+            if isinstance(value, dict) and value.get("type") == "plotly_figure":
+                summarized_results[key] = {
+                    "note": "Plotly figure omitted from commentary context to keep prompt concise."
+                }
+            else:
+                summarized_results[key] = _stringify_for_context(value, RESULT_SECTION_LIMIT)
+        if summarized_results:
+            sanitized["results"] = summarized_results
+    executed_code = execution_results.get("executed_code")
+    if executed_code:
+        sanitized["executed_code"] = _stringify_for_context(executed_code, CODE_SECTION_LIMIT)
+    return sanitized
+
+def _format_execution_summary(execution_results: Dict[str, Any]) -> str:
+    if not execution_results:
+        return "No execution results available."
+    lines = []
+    success = execution_results.get("success")
+    if success is not None:
+        lines.append(f"Status: {'Success' if success else 'Failed'}")
+    output = execution_results.get("output")
+    if output:
+        lines.append("Console Output:")
+        lines.append(output)
+    results = execution_results.get("results")
+    if isinstance(results, dict) and results:
+        lines.append("Captured Results:")
+        for key, value in results.items():
+            if isinstance(value, dict) and value.get("note"):
+                note = value.get("note")
+                lines.append(f"- {key}: {note}")
+            else:
+                lines.append(f"- {key}: {value}")
+    else:
+        lines.append("Captured Results: None")
+    return "\n".join(lines)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -458,86 +534,41 @@ async def ws_endpoint(ws: WebSocket) -> None:
 
                     # Step 3: Generate commentary based on execution results
                     if execution_results:
-                        try:
-                            # Safely serialize execution results for the prompt
-                            serialized_results = json.dumps(execution_results, indent=2, default=str)
+                        sanitized_execution_results = _sanitize_execution_results_for_commentary(execution_results)
+                        execution_summary_text = _format_execution_summary(sanitized_execution_results)
+                        analysis_summary = _truncate_for_context(field_content.get("initial_response", ""), ANALYSIS_SECTION_LIMIT)
+                        if not analysis_summary:
+                            analysis_summary = "No analysis summary available."
 
-                            # Identify the primary result for focused commentary
-                            primary_result = None
-                            primary_result_key = None
-                            if execution_results.get('results'):
-                                # Look for the main result variable in priority order
-                                for key in ['result', 'output', 'summary', 'analysis']:
-                                    if key in execution_results['results']:
-                                        primary_result = execution_results['results'][key]
-                                        primary_result_key = key
-                                        break
+                        code_for_prompt = sanitized_execution_results.get("executed_code") or field_content.get("generated_code", "").strip()
+                        if code_for_prompt:
+                            code_for_prompt = _truncate_for_context(code_for_prompt, CODE_SECTION_LIMIT)
+                        else:
+                            code_for_prompt = "# No code generated."
 
-                            # Create enhanced commentary prompt with original query context
-                            primary_result_section = ""
-                            if primary_result is not None:
-                                primary_result_section = f"""
-PRIMARY RESULT:
-The main calculation result is: {primary_result} (stored in variable '{primary_result_key}')
-
-"""
-
-                            commentary_prompt = f"""Analyze and interpret the following complete code execution context for the user's query:
-
-ORIGINAL USER QUERY: "{user_msg}"
-
-{primary_result_section}EXECUTED CODE:
-```python
-{execution_results.get('executed_code', 'No code available')}
-```
-
-EXECUTION RESULTS:
-{serialized_results}
-
-COMMENTARY INSTRUCTIONS:
-1. START with the primary result: Answer the user's original question directly
-2. EXPLAIN the methodology: Describe how the code achieved this result
-3. PROVIDE context: Add relevant insights about the analysis approach
-
-The primary result ({primary_result}) directly answers the user's query "{user_msg}". Focus your commentary on explaining this result in the context of what the user asked for."""
-                        except Exception as e:
-                            logger.error(f"Failed to serialize execution results: {str(e)}", exc_info=True)
-                            # Fallback to basic string representation with primary result focus
-                            primary_result = None
-                            primary_result_key = None
-                            if execution_results.get('results'):
-                                for key in ['result', 'output', 'summary', 'analysis']:
-                                    if key in execution_results['results']:
-                                        primary_result = execution_results['results'][key]
-                                        primary_result_key = key
-                                        break
-
-                            primary_result_section = ""
-                            if primary_result is not None:
-                                primary_result_section = f"""
-PRIMARY RESULT:
-The main calculation result is: {primary_result} (stored in variable '{primary_result_key}')
-
-"""
-
-                            commentary_prompt = f"""Analyze and interpret the following code execution context for the user's query:
-
-ORIGINAL USER QUERY: "{user_msg}"
-
-{primary_result_section}EXECUTED CODE:
-```python
-{execution_results.get('executed_code', 'No code available')}
-```
-
-EXECUTION RESULTS:
-{str(execution_results)}
-
-COMMENTARY INSTRUCTIONS:
-1. START with the primary result: Answer the user's original question directly
-2. EXPLAIN the methodology: Describe how the code achieved this result
-3. PROVIDE context: Add relevant insights about the analysis approach
-
-The primary result ({primary_result}) directly answers the user's query "{user_msg}". Focus your commentary on explaining this result in the context of what the user asked for."""
+                        prompt_parts = [
+                            "Interpret the analysis results for the user.",
+                            "",
+                            f'ORIGINAL USER QUERY: "{user_msg}"',
+                            "",
+                            "ANALYSIS SUMMARY:",
+                            analysis_summary,
+                            "",
+                            "GENERATED CODE:",
+                            "```python",
+                            code_for_prompt,
+                            "```",
+                            "",
+                            "EXECUTION SUMMARY:",
+                            execution_summary_text,
+                            "",
+                            "COMMENTARY INSTRUCTIONS:",
+                            "1. Start with the direct answer to the user's question.",
+                            "2. Explain the methodology by referencing the code and outputs.",
+                            "3. Provide relevant context or next steps based on the findings.",
+                            "4. If a visualization was generated, describe its key takeaway using the execution summary (raw figure data is omitted).",
+                        ]
+                        commentary_prompt = "\n".join(prompt_parts)
 
                         async for response_chunk in lm_client.generate_structured_response(
                             user_message=commentary_prompt,
@@ -553,7 +584,7 @@ EXAMPLE for "What is the average age of American patients?":
 "The average age of American patients is 54.8 years. The code calculated this by filtering for patients with 'American' nationality and using a custom age calculation function that computed age at admission by comparing Date_of_Birth with Admission_Date, accounting for whether the birthday had occurred yet in the admission year."
 
 CRITICAL: The primary result must be interpreted in the context of the original user query. If the user asks for "average age", the result represents age in years, not a percentage or count.""",
-                            code_execution_results=execution_results,
+                            code_execution_results=sanitized_execution_results,
                             user_rules=user_rules,
                             initial_response_temp=0.5,
                             generated_code_temp=0.3,
