@@ -467,7 +467,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
                     user_rules = rules_manager.get_rules_text()
 
                     # Step 1: Generate initial response and code
-                    await ws.send_json({"event": "delta", "field": "initial_response", "delta": "Analyzing your request and generating response..."})
+                    await ws.send_json({"event": "status", "field": "initial_response", "status": "analyzing"})
 
                     async for response_chunk in lm_client.generate_structured_response(
                         user_message=user_msg,
