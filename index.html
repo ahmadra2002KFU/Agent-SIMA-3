@@ -418,6 +418,60 @@
         }
 
 
+        .commentary-thinking {
+            margin-top: 0.75rem;
+        }
+
+        .commentary-thinking .thinking-lines {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .commentary-thinking .thinking-line {
+            height: 0.65rem;
+            width: 60%;
+            border-radius: 9999px;
+            animation: shimmer 1.6s infinite linear;
+            background: linear-gradient(90deg, rgba(37, 99, 235, 0.18), rgba(59, 130, 246, 0.4), rgba(37, 99, 235, 0.18));
+        }
+
+        .commentary-thinking .thinking-line.short {
+            width: 45%;
+        }
+
+        .dark .commentary-thinking .thinking-line {
+            background: linear-gradient(90deg, rgba(96, 165, 250, 0.18), rgba(147, 197, 253, 0.42), rgba(96, 165, 250, 0.18));
+        }
+
+        .commentary-thinking .dot-wave {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-top: 0.3rem;
+        }
+
+        .commentary-thinking .dot-wave span {
+            display: block;
+            width: 0.45rem;
+            height: 0.45rem;
+            border-radius: 9999px;
+            background: #2563eb;
+            opacity: 0.35;
+            animation: dotty 1.4s infinite ease-in-out;
+        }
+
+        .commentary-thinking .dot-wave span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .commentary-thinking .dot-wave span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        .dark .commentary-thinking .dot-wave span {
+            background: #93c5fd;
+        }
+
         .token.function,
         .token.class-name {
             color: #0891b2;
@@ -1151,6 +1205,40 @@ No recent chats
           }
         }
 
+        function getCommentaryPre(container) {
+          if (!container) return null;
+          return container.querySelector('[data-role="commentary-content"]') || container.querySelector('pre');
+        }
+
+        function setCommentaryThinking(container, isThinking) {
+          const skeleton = container ? container.querySelector('[data-role="commentary-skeleton"]') : null;
+          const pre = getCommentaryPre(container);
+          if (isThinking) {
+            if (skeleton) {
+              const computed = skeleton.dataset.originalDisplay || (typeof window !== 'undefined' ? window.getComputedStyle(skeleton).display : '') || 'grid';
+              skeleton.dataset.originalDisplay = computed;
+              skeleton.style.display = computed;
+              skeleton.classList.remove('hidden');
+            }
+            if (pre) {
+              pre.textContent = '';
+              pre.classList.add('hidden');
+              pre.dataset.isSkeleton = 'true';
+            }
+          } else {
+            if (skeleton) {
+              skeleton.classList.add('hidden');
+              skeleton.style.display = 'none';
+            }
+            if (pre) {
+              pre.classList.remove('hidden');
+              if (pre.dataset) {
+                delete pre.dataset.isSkeleton;
+              }
+            }
+          }
+        }
+
         function connectWS(){
           const proto = location.protocol === 'https:' ? 'wss' : 'ws';
           const base = location.host ? (proto + '://' + location.host) : 'ws://127.0.0.1:8010';
@@ -1247,7 +1335,14 @@ No recent chats
                     </span>
                     Commentary
                   </div>
-                  <pre class="content-text whitespace-pre-wrap"></pre>
+                  <div class="commentary-thinking" data-role="commentary-wrapper">
+                    <div class="thinking-lines" data-role="commentary-skeleton">
+                      <div class="thinking-line"></div>
+                      <div class="thinking-line short"></div>
+                      <div class="dot-wave" aria-hidden="true"><span></span><span></span><span></span></div>
+                    </div>
+                    <pre class="content-text whitespace-pre-wrap hidden" data-role="commentary-content"></pre>
+                  </div>
                 `;
 
                 // Append containers in NEW ORDER: Analysis â†’ Code â†’ Viz â†’ Results â†’ Commentary
@@ -1257,6 +1352,7 @@ No recent chats
                 convoView.appendChild(containers.results_block);
                 convoView.appendChild(containers.result_commentary);
                 setAnalysisThinking(containers.initial_response, true);
+                setCommentaryThinking(containers.result_commentary, true);
                 convoView.scrollTop = convoView.scrollHeight;
               } else if(msg.event === 'status' && containers && msg.field){
                 if (msg.field === 'initial_response' && msg.status === 'analyzing') {
@@ -1285,6 +1381,18 @@ No recent chats
                       }
                     }
                   }
+                } else if (msg.field === 'result_commentary') {
+                  const preElement = getCommentaryPre(containers.result_commentary);
+                  if (preElement) {
+                    const shouldSkip = preElement.dataset.isSkeleton && msg.delta.trim().length === 0;
+                    if (!shouldSkip) {
+                      if (preElement.dataset.isSkeleton) {
+                        setCommentaryThinking(containers.result_commentary, false);
+                        preElement.textContent = '';
+                      }
+                      preElement.textContent += msg.delta;
+                    }
+                  }
                 } else if (containers[msg.field]) {
                   const preElement = containers[msg.field].querySelector('pre');
                   if (preElement) {
@@ -1307,6 +1415,12 @@ No recent chats
                     setAnalysisThinking(containers.initial_response, false);
                     preElement.textContent = msg.content || '';
                   }
+                } else if (msg.field === 'result_commentary') {
+                  const preElement = getCommentaryPre(containers.result_commentary);
+                  if (preElement) {
+                    setCommentaryThinking(containers.result_commentary, false);
+                    preElement.textContent = msg.content || '';
+                  }
                 } else if (containers[msg.field]) {
                   const preElement = containers[msg.field].querySelector('pre');
                   if (preElement) {
@@ -1317,6 +1431,9 @@ No recent chats
               } else if(msg.event === 'end' && msg.final){
                 if (containers && containers.initial_response) {
                   setAnalysisThinking(containers.initial_response, false);
+                }
+                if (containers && containers.result_commentary) {
+                  setCommentaryThinking(containers.result_commentary, false);
                 }
                 // Apply syntax highlighting to the final code
                 if (containers && containers.generated_code) {
