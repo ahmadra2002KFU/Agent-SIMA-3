@@ -1168,6 +1168,7 @@ No recent chats
         let ws = null;
         let containers = null;
         let currentFile = null;
+        let commentaryRevealTimer = null;
 
         const ANALYSIS_PLACEHOLDER = 'Analyzing your request and generating response...';
 
@@ -1210,6 +1211,18 @@ No recent chats
           return container.querySelector('[data-role="commentary-content"]') || container.querySelector('pre');
         }
 
+
+        function revealGeneratedCode() {
+          if (containers && containers.generated_code && containers.generated_code.classList.contains('hidden')) {
+            containers.generated_code.classList.remove('hidden');
+          }
+        }
+
+        function revealCommentary() {
+          if (containers && containers.result_commentary && containers.result_commentary.classList.contains('hidden')) {
+            containers.result_commentary.classList.remove('hidden');
+          }
+        }
         function setCommentaryThinking(container, isThinking) {
           const skeleton = container ? container.querySelector('[data-role="commentary-skeleton"]') : null;
           const pre = getCommentaryPre(container);
@@ -1239,6 +1252,27 @@ No recent chats
           }
         }
 
+        function ensureCommentaryPending() {
+          if (!containers || !containers.result_commentary) {
+            return;
+          }
+          revealCommentary();
+          const pre = getCommentaryPre(containers.result_commentary);
+          if (pre && !(pre.textContent && pre.textContent.trim())) {
+            setCommentaryThinking(containers.result_commentary, true);
+          }
+        }
+
+        function scheduleCommentaryPendingReveal(delay = 250) {
+          if (commentaryRevealTimer) {
+            clearTimeout(commentaryRevealTimer);
+          }
+          commentaryRevealTimer = window.setTimeout(() => {
+            commentaryRevealTimer = null;
+            ensureCommentaryPending();
+          }, delay);
+        }
+
         function connectWS(){
           const proto = location.protocol === 'https:' ? 'wss' : 'ws';
           const base = location.host ? (proto + '://' + location.host) : 'ws://127.0.0.1:8010';
@@ -1256,6 +1290,11 @@ No recent chats
                   results_block: document.createElement('div'),
                   result_commentary: document.createElement('div')
                 };
+
+                if (commentaryRevealTimer) {
+                  clearTimeout(commentaryRevealTimer);
+                  commentaryRevealTimer = null;
+                }
 
                 // 1. Analysis (displayed FIRST)
                 containers.initial_response.className = 'ai-response-card p-5 mb-4 rounded-xl relative z-10';
@@ -1277,7 +1316,7 @@ No recent chats
                 `;
 
                 // 2. Python Code Block (displayed SECOND)
-                containers.generated_code.className = 'mb-4 relative z-10';
+                containers.generated_code.className = 'mb-4 relative z-10 hidden';
                 containers.generated_code.innerHTML = `
                   <div class="code-block-container">
                     <div class="code-block-header">
@@ -1327,7 +1366,7 @@ No recent chats
                 `;
 
                 // 5. Commentary (displayed FIFTH)
-                containers.result_commentary.className = 'ai-response-card p-5 mb-4 rounded-xl relative z-10';
+                containers.result_commentary.className = 'ai-response-card p-5 mb-4 rounded-xl relative z-10 hidden';
                 containers.result_commentary.innerHTML = `
                   <div class="section-title">
                     <span class="card-header-icon">
@@ -1360,10 +1399,12 @@ No recent chats
                 }
               } else if(msg.event === 'delta' && containers && msg.field && msg.delta){
                 if (msg.field === 'generated_code') {
+                  revealGeneratedCode();
                   const codeElement = containers[msg.field].querySelector('code');
                   if (codeElement) {
                     codeElement.textContent += msg.delta;
                   }
+                  scheduleCommentaryPendingReveal();
                 } else if (msg.field === 'initial_response') {
                   const preElement = getAnalysisPre(containers.initial_response);
                   if (preElement) {
@@ -1382,6 +1423,11 @@ No recent chats
                     }
                   }
                 } else if (msg.field === 'result_commentary') {
+                  if (commentaryRevealTimer) {
+                    clearTimeout(commentaryRevealTimer);
+                    commentaryRevealTimer = null;
+                  }
+                  ensureCommentaryPending();
                   const preElement = getCommentaryPre(containers.result_commentary);
                   if (preElement) {
                     const shouldSkip = preElement.dataset.isSkeleton && msg.delta.trim().length === 0;
@@ -1403,12 +1449,14 @@ No recent chats
               } else if(msg.event === 'replace' && containers && msg.field && msg.content !== undefined){
                 // Replace the entire content (used to fix escape sequence issues)
                 if (msg.field === 'generated_code') {
+                  revealGeneratedCode();
                   const codeElement = containers[msg.field].querySelector('code');
                   if (codeElement) {
                     codeElement.textContent = msg.content;
                     // Apply syntax highlighting
                     Prism.highlightElement(codeElement);
                   }
+                  ensureCommentaryPending();
                 } else if (msg.field === 'initial_response') {
                   const preElement = getAnalysisPre(containers.initial_response);
                   if (preElement) {
@@ -1433,7 +1481,11 @@ No recent chats
                   setAnalysisThinking(containers.initial_response, false);
                 }
                 if (containers && containers.result_commentary) {
-                  setCommentaryThinking(containers.result_commentary, false);
+                  revealCommentary();
+                  const commentaryPre = getCommentaryPre(containers.result_commentary);
+                  if (commentaryPre && commentaryPre.textContent && commentaryPre.textContent.trim()) {
+                    setCommentaryThinking(containers.result_commentary, false);
+                  }
                 }
                 // Apply syntax highlighting to the final code
                 if (containers && containers.generated_code) {
