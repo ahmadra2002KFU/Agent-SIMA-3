@@ -120,7 +120,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Local LLM Chatbot (POC)", lifespan=lifespan)
 
 # Mount static files to serve the logo
-app.mount("/static", StaticFiles(directory=".."), name="static")
+app.mount("/static", StaticFiles(directory="../static"), name="static")
 
 # System prompt for the LLM
 SYSTEM_PROMPT = """You are an AI assistant specialized in data analysis and visualization.

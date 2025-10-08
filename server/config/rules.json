@@ -1,13 +1,4 @@
 {
   "version": 1,
-  "rules": [
-    {
-      "id": 5,
-      "text": "Always use plotly instead of matplotlib",
-      "category": "general",
-      "priority": 1,
-      "active": true,
-      "created_at": "2025-09-28T23:46:10.761422"
-    }
-  ]
+  "rules": []
 }
