@@ -2,9 +2,9 @@ import asyncio
 import json
 import logging
 import math
-import os
 from contextlib import asynccontextmanager
 from typing import Any, Dict
+from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
@@ -16,6 +16,12 @@ from code_executor import code_executor
 from rules_manager import rules_manager
 
 logger = logging.getLogger(__name__)
+
+BASE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = BASE_DIR.parent
+STATIC_DIR = PROJECT_ROOT / "static"
+INDEX_FILE = PROJECT_ROOT / "index.html"
+UPLOADS_DIR = PROJECT_ROOT / "uploads"
 
 CONTEXT_TRUNCATION_SUFFIX = "... [truncated]"
 ANALYSIS_SECTION_LIMIT = 2000
@@ -100,10 +106,10 @@ async def lifespan(app: FastAPI):
     logger.info("AI Sima Chatbot server starting up...")
 
     # Auto-load hospital_patients.csv if it exists
-    hospital_file_path = "../uploads/hospital_patients.csv"
-    if os.path.exists(hospital_file_path):
+    hospital_file_path = UPLOADS_DIR / "hospital_patients.csv"
+    if hospital_file_path.exists():
         logger.info(f"Auto-loading {hospital_file_path}...")
-        success = file_handler.set_current_file(hospital_file_path, "hospital_patients.csv")
+        success = file_handler.set_current_file(str(hospital_file_path), "hospital_patients.csv")
         if success:
             file_info = file_handler.get_current_file_info()
             logger.info(f"Successfully loaded hospital_patients.csv: {file_info['rows']} rows, {file_info['columns']} columns")
@@ -120,7 +126,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Local LLM Chatbot (POC)", lifespan=lifespan)
 
 # Mount static files to serve the logo
-app.mount("/static", StaticFiles(directory="../static"), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # System prompt for the LLM
 SYSTEM_PROMPT = """You are an AI assistant specialized in data analysis and visualization.
@@ -194,7 +200,7 @@ df.head(5)  # This won't capture the output!
 @app.get("/")
 async def root_index() -> FileResponse:
     # Serve the existing frontend file
-    return FileResponse("../index.html")
+    return FileResponse(INDEX_FILE)
 
 
 @app.get("/health")
