@@ -5,6 +5,10 @@
             'opsz'24
         }
         
+        :root {
+            --conversation-max-width: 960px;
+        }
+        
         /* Mobile responsive design */
         @media (max-width: 768px) {
             /* Mobile sidebar behavior - overlay instead of push */
@@ -68,6 +72,10 @@
         /* Ensure proper spacing for dynamic content */
         #chat-conversation-view > div {
             margin-bottom: 1rem;
+            width: min(100%, var(--conversation-max-width));
+            margin-left: auto;
+            margin-right: auto;
+            min-width: 0;
         }
         
         /* Prevent button overlap in chat input */
@@ -77,6 +85,22 @@
         
         .viz-container > div {
             margin-bottom: 1.5rem;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .visualization-card {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            min-width: 0;
+            overscroll-behavior-x: contain;
+        }
+
+        .visualization-plot {
+            width: 100%;
+            min-width: 0;
         }
         
         /* Ensure dropdowns and modals appear above other content */
@@ -846,6 +870,12 @@
         /* Better spacing for conversation view */
         #chat-conversation-view {
             padding: 1.5rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            box-sizing: border-box;
+            min-width: 0;
         }
 
         @media (min-width: 768px) {

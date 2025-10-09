@@ -1314,7 +1314,7 @@
 
               // Create a div for this visualization
               const vizDiv = document.createElement('div');
-              vizDiv.className = 'mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 relative z-10';
+              vizDiv.className = 'mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 relative z-10 visualization-card';
               vizDiv.style.animation = 'fadeInUp 0.4s ease-out';
               vizDiv.id = 'plot_' + Math.random().toString(36).substr(2, 9);
 
@@ -1331,6 +1331,7 @@
 
               // Add plot container
               const plotDiv = document.createElement('div');
+              plotDiv.className = 'visualization-plot';
               plotDiv.id = vizDiv.id + '_plot';
               plotDiv.style.width = '100%';
               plotDiv.style.height = '400px';
