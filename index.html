@@ -124,12 +124,12 @@ No recent chats
 </button>
 
 <!-- Model Status -->
-<div class="flex items-center space-x-2 bg-surface-light dark:bg-surface-dark px-4 py-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600">
+<div id="model-status" class="flex items-center space-x-2 bg-surface-light dark:bg-surface-dark px-4 py-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600" title="Checking LM Studio status">
 <span class="relative flex h-3 w-3 z-10">
-<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-<span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+<span id="model-status-ping" class="absolute inline-flex h-full w-full rounded-full opacity-75 hidden"></span>
+<span id="model-status-dot" class="relative inline-flex rounded-full h-3 w-3 bg-gray-400"></span>
 </span>
-<span class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">Model Connected</span>
+<span id="model-status-text" class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">Checking model...</span>
 </div>
 </header>
 <div class="flex-1 flex flex-col items-center justify-center text-center px-6 md:px-8 lg:px-12 relative z-10" id="chat-start-view">

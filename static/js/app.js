@@ -133,6 +133,124 @@
         const processingStatusIcon = document.getElementById('processing-status-icon');
         const processingProgressBar = document.getElementById('processing-progress-bar');
         const MIN_PROGRESS_VISIBLE_MS = 600;
+        const modelStatusContainer = document.getElementById('model-status');
+        const modelStatusDot = document.getElementById('model-status-dot');
+        const modelStatusPing = document.getElementById('model-status-ping');
+        const modelStatusText = document.getElementById('model-status-text');
+        const MODEL_STATUS_DOT_CLASSES = ['bg-gray-400', 'bg-green-500', 'bg-red-500', 'bg-amber-500'];
+        const MODEL_STATUS_PING_CLASSES = ['bg-green-400', 'bg-red-400', 'bg-amber-400'];
+        const MODEL_STATUS_CONFIG = {
+          checking: {
+            text: 'Checking model...',
+            dotColor: 'bg-amber-500',
+            pingColor: 'bg-amber-400',
+            showPing: true,
+            tooltip: 'Checking LM Studio health...'
+          },
+          connected: {
+            text: 'Model Connected',
+            dotColor: 'bg-green-500',
+            pingColor: 'bg-green-400',
+            showPing: true,
+            tooltip: (meta) => meta && meta.url ? `Connected to ${meta.url}` : 'LM Studio is available'
+          },
+          offline: {
+            text: 'Model Offline',
+            dotColor: 'bg-red-500',
+            pingColor: 'bg-red-400',
+            showPing: false,
+            tooltip: 'LM Studio not reachable. Start it on http://127.0.0.1:1234'
+          }
+        };
+        const LM_STATUS_POLL_INTERVAL_MS = 15000;
+        let modelStatusState = null;
+
+        function setModelStatus(state, meta = {}) {
+          if (!modelStatusContainer) {
+            return;
+          }
+
+          const config = MODEL_STATUS_CONFIG[state] || MODEL_STATUS_CONFIG.checking;
+
+          if (modelStatusText) {
+            modelStatusText.textContent = config.text;
+          }
+
+          if (modelStatusDot) {
+            MODEL_STATUS_DOT_CLASSES.forEach(cls => modelStatusDot.classList.remove(cls));
+            if (config.dotColor) {
+              modelStatusDot.classList.add(config.dotColor);
+            }
+          }
+
+          if (modelStatusPing) {
+            MODEL_STATUS_PING_CLASSES.forEach(cls => modelStatusPing.classList.remove(cls));
+            modelStatusPing.classList.remove('animate-ping');
+            modelStatusPing.classList.remove('hidden');
+
+            if (config.showPing) {
+              modelStatusPing.classList.add('animate-ping');
+              if (config.pingColor) {
+                modelStatusPing.classList.add(config.pingColor);
+              }
+            } else {
+              modelStatusPing.classList.add('hidden');
+            }
+          }
+
+          if (modelStatusContainer) {
+            const tooltipValue = typeof config.tooltip === 'function' ? config.tooltip(meta) : config.tooltip;
+            if (tooltipValue) {
+              modelStatusContainer.setAttribute('title', tooltipValue);
+            } else {
+              modelStatusContainer.removeAttribute('title');
+            }
+            modelStatusContainer.dataset.status = state;
+          }
+
+          modelStatusState = state;
+        }
+
+        async function checkLmStudioStatus(options = {}) {
+          if (!modelStatusContainer) {
+            return;
+          }
+
+          const { showSpinner = false } = options;
+
+          if (showSpinner) {
+            setModelStatus('checking');
+          }
+
+          try {
+            const response = await fetch('/health/lmstudio', { cache: 'no-store' });
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            const isRunning = data && data.lm_studio && data.lm_studio.running;
+
+            if (isRunning) {
+              setModelStatus('connected', { url: data.lm_studio.url });
+            } else {
+              setModelStatus('offline');
+            }
+          } catch (error) {
+            if (modelStatusState !== 'offline') {
+              console.warn('LM Studio health check failed:', error);
+            }
+            setModelStatus('offline');
+          }
+        }
+
+        if (modelStatusContainer) {
+          checkLmStudioStatus({ showSpinner: true });
+          setInterval(() => {
+            checkLmStudioStatus();
+          }, LM_STATUS_POLL_INTERVAL_MS);
+        }
+
         let dropzoneDragDepth = 0;
         let ws = null;
         let containers = null;
