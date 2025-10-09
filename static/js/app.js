@@ -1033,17 +1033,62 @@
 
           updateWelcomeFileStatus(fileInfo);
 
-          // Update the file info section in the sidebar
-          const fileInfoSection = document.querySelector('.mb-6.p-4.bg-background-light');
-          if (fileInfoSection) {
-            const rowsSpan = fileInfoSection.querySelector('.flex:nth-child(1) .font-medium');
-            const colsSpan = fileInfoSection.querySelector('.flex:nth-child(2) .font-medium');
-            const sizeSpan = fileInfoSection.querySelector('.flex:nth-child(3) .font-medium');
+          const rowsSpan = document.getElementById('file-info-rows');
+          const colsSpan = document.getElementById('file-info-columns');
+          const sizeSpan = document.getElementById('file-info-size');
 
-            if (rowsSpan) rowsSpan.textContent = fileInfo.rows.toLocaleString();
-            if (colsSpan) colsSpan.textContent = fileInfo.columns;
-            if (sizeSpan) sizeSpan.textContent = fileInfo.size_mb + ' MB';
-          }
+          const coerceNumber = (value) => {
+            if (typeof value === 'number') {
+              return Number.isFinite(value) ? value : null;
+            }
+            if (Array.isArray(value)) {
+              return value.length;
+            }
+            if (typeof value === 'string') {
+              const parsed = Number(value.replace(/[^0-9.+-]/g, ''));
+              return Number.isFinite(parsed) ? parsed : null;
+            }
+            return null;
+          };
+
+          const resolvedRows =
+            coerceNumber(fileInfo.rows) ??
+            coerceNumber(fileInfo.row_count) ??
+            coerceNumber(fileInfo.shape?.rows) ??
+            coerceNumber(fileInfo.metadata?.basic_info?.shape?.rows);
+
+          const resolvedColumns =
+            coerceNumber(fileInfo.columns) ??
+            coerceNumber(fileInfo.column_count) ??
+            coerceNumber(fileInfo.shape?.columns) ??
+            coerceNumber(fileInfo.metadata?.basic_info?.shape?.columns) ??
+            (Array.isArray(fileInfo.column_names) ? fileInfo.column_names.length : null);
+
+          const resolvedSize =
+            coerceNumber(fileInfo.size_mb) ??
+            coerceNumber(fileInfo.memory_usage_mb) ??
+            coerceNumber(fileInfo.metadata?.basic_info?.memory_usage_mb);
+
+          const formatCount = (value) => {
+            if (typeof value === 'number' && Number.isFinite(value)) {
+              return value.toLocaleString();
+            }
+            return '-';
+          };
+
+          const formatSize = (value) => {
+            if (typeof value === 'number' && Number.isFinite(value)) {
+              return `${value.toFixed(2)} MB`;
+            }
+            if (typeof value === 'string' && value.trim()) {
+              return value;
+            }
+            return '-';
+          };
+
+          if (rowsSpan) rowsSpan.textContent = formatCount(resolvedRows);
+          if (colsSpan) colsSpan.textContent = formatCount(resolvedColumns);
+          if (sizeSpan) sizeSpan.textContent = formatSize(resolvedSize ?? fileInfo.size_mb);
         }
 
         function handleFinalResponse(finalResponse) {
