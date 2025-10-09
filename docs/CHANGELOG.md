@@ -9,6 +9,8 @@ All notable changes to this project will be documented in this file.
 - Automatic conversion pipeline for `.xlsx`/`.xls` uploads into normalized CSV files.
 - Normalized file metadata now exposes conversion status, processed filenames, and original storage paths.
 - Client-side upload progress indicator with streaming percentage updates for large files.
+- Upload flow now shows a dedicated upload progress bar alongside a separate processing indicator for clearer UX feedback.
+- Replaced native `alert()` popups with styled toast notifications that match the app's visual language.
 - Regression coverage for Excel ingestion via `testing stuff/test_file_handler_xlsx.py`.
 
 ### Fixed

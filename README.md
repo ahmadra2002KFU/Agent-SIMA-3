@@ -6,7 +6,8 @@ A comprehensive local LLM-powered chatbot web interface with advanced file proce
 
 ### Core Functionality
 - **Real-time WebSocket streaming** for live LLM responses
-- **File upload support** for CSV and XLSX files with validation, automatic Excel-to-CSV normalization, and real-time progress feedback
+- **File upload support** for CSV and XLSX files with validation, automatic Excel-to-CSV normalization, and real-time upload + processing indicators
+- **Polished in-app notifications** with themed toasts for successes, warnings, and errors
 - **3-layer processing architecture** for comprehensive data analysis
 - **Sandboxed code execution** with security restrictions
 - **Interactive Plotly visualizations** with publication-ready styling

@@ -125,7 +125,13 @@
         const uploadProgressContainer = document.getElementById('upload-progress-container');
         const uploadProgressBar = document.getElementById('upload-progress-bar');
         const uploadProgressPercent = document.getElementById('upload-progress-percent');
-        const uploadProgressText = document.getElementById('upload-progress-text');
+        const uploadProgressLabel = document.getElementById('upload-progress-label');
+        const uploadProgressFilename = document.getElementById('upload-progress-filename');
+        const processingStatusSection = document.getElementById('processing-status');
+        const processingStatusText = document.getElementById('processing-status-text');
+        const processingStatusIndicator = document.getElementById('processing-status-indicator');
+        const processingStatusIcon = document.getElementById('processing-status-icon');
+        const processingProgressBar = document.getElementById('processing-progress-bar');
         const MIN_PROGRESS_VISIBLE_MS = 600;
         let dropzoneDragDepth = 0;
         let ws = null;
@@ -213,6 +219,125 @@
           }
         }
 
+        const notificationContainer = document.getElementById('notification-container');
+
+        function showNotification(message, options = {}) {
+          if (!notificationContainer) return;
+          const { type = 'info', title, duration = 4500 } = options;
+          const resolvedMessage = typeof message === 'string' ? message : String(message ?? '');
+          const variant = ['success', 'info', 'warning', 'error'].includes(type) ? type : 'info';
+          const iconMap = {
+            success: 'check_circle',
+            info: 'info',
+            warning: 'warning',
+            error: 'error',
+          };
+          const defaultTitleMap = {
+            success: 'Success',
+            info: 'Notice',
+            warning: 'Warning',
+            error: 'Error',
+          };
+
+          const toast = document.createElement('div');
+          toast.className = 'notification-toast';
+          toast.dataset.variant = variant;
+          const role = variant === 'error' || variant === 'warning' ? 'alert' : 'status';
+          toast.setAttribute('role', role);
+          toast.setAttribute('aria-live', role === 'alert' ? 'assertive' : 'polite');
+
+          const iconWrapper = document.createElement('div');
+          iconWrapper.className = 'notification-icon';
+          const iconEl = document.createElement('span');
+          iconEl.className = 'material-symbols-outlined';
+          iconEl.textContent = iconMap[variant];
+          iconWrapper.appendChild(iconEl);
+
+          const body = document.createElement('div');
+          body.className = 'notification-body';
+          const titleText = title || defaultTitleMap[variant];
+          if (titleText) {
+            const titleEl = document.createElement('p');
+            titleEl.className = 'notification-title';
+            titleEl.textContent = titleText;
+            body.appendChild(titleEl);
+          }
+          const messageEl = document.createElement('p');
+          messageEl.className = 'notification-message';
+          messageEl.textContent = resolvedMessage;
+          body.appendChild(messageEl);
+
+          const dismissBtn = document.createElement('button');
+          dismissBtn.type = 'button';
+          dismissBtn.className = 'notification-dismiss';
+          dismissBtn.setAttribute('aria-label', 'Dismiss notification');
+          const dismissIcon = document.createElement('span');
+          dismissIcon.className = 'material-symbols-outlined';
+          dismissIcon.textContent = 'close';
+          dismissBtn.appendChild(dismissIcon);
+
+          toast.appendChild(iconWrapper);
+          toast.appendChild(body);
+          toast.appendChild(dismissBtn);
+
+          const removeToast = () => {
+            if (!toast.classList.contains('notification-hide')) {
+              toast.classList.add('notification-hide');
+              setTimeout(() => {
+                toast.remove();
+              }, 220);
+            }
+          };
+
+          let hideTimer = null;
+          if (Number.isFinite(duration) && duration > 0) {
+            hideTimer = setTimeout(removeToast, duration);
+          }
+
+          toast.addEventListener('mouseenter', () => {
+            if (hideTimer) {
+              clearTimeout(hideTimer);
+              hideTimer = null;
+            }
+          });
+
+          toast.addEventListener('mouseleave', () => {
+            if (!toast.classList.contains('notification-hide') && Number.isFinite(duration) && duration > 0) {
+              hideTimer = setTimeout(removeToast, 1600);
+            }
+          });
+
+          dismissBtn.addEventListener('click', () => {
+            if (hideTimer) {
+              clearTimeout(hideTimer);
+            }
+            removeToast();
+          });
+
+          notificationContainer.prepend(toast);
+        }
+
+        function resetProcessingStage() {
+          if (!processingStatusSection) return;
+          processingStatusSection.classList.add('hidden');
+          if (processingStatusText) {
+            processingStatusText.textContent = 'Processing...';
+          }
+          if (processingStatusIndicator) {
+            processingStatusIndicator.classList.remove('text-green-600', 'dark:text-green-400');
+            processingStatusIndicator.classList.add('text-primary', 'dark:text-blue-300');
+          }
+          if (processingStatusIcon) {
+            processingStatusIcon.textContent = 'hourglass_top';
+          }
+          if (processingProgressBar) {
+            processingProgressBar.classList.remove('hidden');
+            if (!processingProgressBar.classList.contains('animate-pulse')) {
+              processingProgressBar.classList.add('animate-pulse');
+            }
+          }
+        }
+
         function startUploadProgress(filename) {
           if (!uploadProgressContainer) return;
           if (uploadProgressHideTimer) {
@@ -231,9 +356,13 @@
           if (uploadProgressPercent) {
             uploadProgressPercent.textContent = '0%';
           }
-          if (uploadProgressText) {
-            uploadProgressText.textContent = filename ? `Uploading ${filename}...` : 'Uploading...';
+          if (uploadProgressLabel) {
+            uploadProgressLabel.textContent = 'Uploading';
           }
+          if (uploadProgressFilename) {
+            uploadProgressFilename.textContent = filename || '';
+          }
+          resetProcessingStage();
         }
 
         function updateUploadProgressDisplay(percent) {
@@ -252,7 +381,7 @@
           }
         }
 
-        function setUploadProgressToIndeterminate(filename) {
+        function setUploadProgressToIndeterminate() {
           if (!uploadProgressContainer || uploadProgressIndeterminate || uploadProgressProcessingShown) return;
           uploadProgressIndeterminate = true;
           if (uploadProgressBar) {
@@ -262,24 +391,51 @@
           if (uploadProgressPercent) {
             uploadProgressPercent.textContent = '--%';
           }
-          if (uploadProgressText) {
-            uploadProgressText.textContent = filename ? `Uploading ${filename}...` : 'Uploading...';
-          }
         }
 
-        function markUploadProcessing(message = 'Processing file...', label = 'Processing') {
+        function markUploadComplete(filename) {
           if (!uploadProgressContainer) return;
-          uploadProgressProcessingShown = true;
           uploadProgressIndeterminate = false;
           if (uploadProgressBar) {
             uploadProgressBar.classList.remove('animate-pulse');
             uploadProgressBar.style.width = '100%';
           }
           if (uploadProgressPercent) {
-            uploadProgressPercent.textContent = label;
+            uploadProgressPercent.textContent = '100%';
           }
-          if (uploadProgressText) {
-            uploadProgressText.textContent = message;
+          if (uploadProgressLabel) {
+            uploadProgressLabel.textContent = 'Upload complete';
+          }
+          if (uploadProgressFilename && filename) {
+            uploadProgressFilename.textContent = filename;
+          }
+        }
+
+        function showProcessingStage(filename) {
+          if (!processingStatusSection) return;
+          resetProcessingStage();
+          processingStatusSection.classList.remove('hidden');
+          if (processingStatusText) {
+            processingStatusText.textContent = filename ? `Processing ${filename}...` : 'Processing...';
+          }
+          uploadProgressProcessingShown = true;
+        }
+
+        function completeProcessingStage(message = 'Processing complete') {
+          if (!processingStatusSection) return;
+          if (processingStatusText) {
+            processingStatusText.textContent = message;
+          }
+          if (processingStatusIndicator) {
+            processingStatusIndicator.classList.remove('text-primary', 'dark:text-blue-300');
+            processingStatusIndicator.classList.add('text-green-600', 'dark:text-green-400');
+          }
+          if (processingStatusIcon) {
+            processingStatusIcon.textContent = 'check_circle';
+          }
+          if (processingProgressBar) {
+            processingProgressBar.classList.remove('animate-pulse');
+            processingProgressBar.classList.add('hidden');
           }
         }
 
@@ -303,9 +459,13 @@
             if (uploadProgressPercent) {
               uploadProgressPercent.textContent = '0%';
             }
-            if (uploadProgressText) {
-              uploadProgressText.textContent = 'Uploading...';
+            if (uploadProgressLabel) {
+              uploadProgressLabel.textContent = 'Upload';
             }
+            if (uploadProgressFilename) {
+              uploadProgressFilename.textContent = '';
+            }
+            resetProcessingStage();
             uploadProgressContainer.classList.add('hidden');
             uploadProgressContainer.setAttribute('aria-hidden', 'true');
             uploadProgressHideTimer = null;
@@ -820,12 +980,13 @@
               },
               onIndeterminate: () => {
                 if (!uploadProgressProcessingShown) {
-                  setUploadProgressToIndeterminate(file.name);
+                  setUploadProgressToIndeterminate();
                   setWelcomeStatus(`Uploading ${file.name}...`, 'pending');
                 }
               },
               onUploadComplete: () => {
-                markUploadProcessing(`Processing ${file.name}...`, 'Processing');
+                markUploadComplete(file.name);
+                showProcessingStage(file.name);
                 setWelcomeStatus(`Processing ${file.name}...`, 'pending');
               }
             });
@@ -833,13 +994,13 @@
             const result = body || {};
 
             if (status >= 200 && status < 300) {
-              markUploadProcessing(`${file.name} ready for analysis`, 'Complete');
+              completeProcessingStage('Processing complete');
               setWelcomeStatus(`${file.name} uploaded successfully`, 'success');
 
               currentFile = result.file_info;
               updateFileInfo(currentFile);
               revealConversationView();
-              alert('File uploaded successfully!');
+              showNotification(`${file.name} uploaded successfully`, {type: 'success', title: 'Upload complete'});
               hideUploadProgress(700);
             } else {
               const detail = result.detail || 'Unknown error';
@@ -848,7 +1009,7 @@
               if (welcomeUploadPrompt) {
                 welcomeUploadPrompt.textContent = defaultWelcomePrompt || 'Drag and drop a file here, or click to browse your device.';
               }
-              alert('Upload failed: ' + detail);
+              showNotification(detail || 'Upload failed', {type: 'error', title: 'Upload failed'});
             }
           } catch (error) {
             hideUploadProgress(0);
@@ -857,7 +1018,7 @@
             if (welcomeUploadPrompt) {
               welcomeUploadPrompt.textContent = defaultWelcomePrompt || 'Drag and drop a file here, or click to browse your device.';
             }
-            alert('Upload error: ' + message);
+            showNotification(message, {type: 'error', title: 'Upload error'});
           } finally {
             if (fileInput) {
               fileInput.value = '';
@@ -1150,13 +1311,14 @@
           .then(result => {
             if (result.status === 'success') {
               loadRules(); // Reload rules
+              showNotification('Rule added successfully', {type: 'success', title: 'Rule saved'});
             } else {
-              alert('Failed to add rule: ' + result.message);
+              showNotification(result.message || 'Failed to add rule', {type: 'error', title: 'Rule creation failed'});
             }
           })
           .catch(error => {
             console.error('Error adding rule:', error);
-            alert('Failed to add rule');
+            showNotification('Failed to add rule', {type: 'error', title: 'Rule creation failed'});
           });
         }
 
@@ -1170,13 +1332,14 @@
           .then(result => {
             if (result.status === 'success') {
               loadRules(); // Reload rules
+              showNotification('Rule removed', {type: 'success', title: 'Rule deleted'});
             } else {
-              alert('Failed to delete rule: ' + result.message);
+              showNotification(result.message || 'Failed to delete rule', {type: 'error', title: 'Rule removal failed'});
             }
           })
           .catch(error => {
             console.error('Error deleting rule:', error);
-            alert('Failed to delete rule');
+            showNotification('Failed to delete rule', {type: 'error', title: 'Rule removal failed'});
           });
         }
 
@@ -1225,6 +1388,7 @@
         window.copyCodeToClipboard = copyCodeToClipboard;
         window.deleteRule = deleteRule;
         window.addRule = addRule;
+        window.showNotification = showNotification;
 
 
 
