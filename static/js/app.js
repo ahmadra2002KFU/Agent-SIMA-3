@@ -1,4 +1,4 @@
-﻿(function(){
+(function(){
         // Sidebar Toggle Functionality
         const sidebar = document.getElementById('sidebar');
         const sidebarToggle = document.getElementById('sidebar-toggle');
@@ -122,11 +122,20 @@
         const welcomeUploadStatus = document.getElementById('welcome-upload-status');
         const welcomeUploadPrompt = document.getElementById('welcome-upload-prompt');
         const defaultWelcomePrompt = welcomeUploadPrompt ? welcomeUploadPrompt.textContent : '';
+        const uploadProgressContainer = document.getElementById('upload-progress-container');
+        const uploadProgressBar = document.getElementById('upload-progress-bar');
+        const uploadProgressPercent = document.getElementById('upload-progress-percent');
+        const uploadProgressText = document.getElementById('upload-progress-text');
+        const MIN_PROGRESS_VISIBLE_MS = 600;
         let dropzoneDragDepth = 0;
         let ws = null;
         let containers = null;
         let currentFile = null;
         let commentaryRevealTimer = null;
+        let uploadProgressHideTimer = null;
+        let uploadProgressIndeterminate = false;
+        let uploadProgressProcessingShown = false;
+        let uploadProgressStartTime = 0;
 
         function revealConversationView() {
           if (!startView || !convoView) return;
@@ -188,6 +197,119 @@
           } else {
             welcomeDropzone.classList.remove('dropzone-active');
           }
+        }
+
+        if (uploadProgressContainer) {
+          uploadProgressContainer.setAttribute('aria-hidden', 'true');
+        }
+
+        function safeJsonParse(rawValue) {
+          if (!rawValue) return {};
+          if (typeof rawValue === 'object') return rawValue;
+          try {
+            return JSON.parse(rawValue);
+          } catch (err) {
+            return {};
+          }
+        }
+
+        function startUploadProgress(filename) {
+          if (!uploadProgressContainer) return;
+          if (uploadProgressHideTimer) {
+            clearTimeout(uploadProgressHideTimer);
+            uploadProgressHideTimer = null;
+          }
+          uploadProgressProcessingShown = false;
+          uploadProgressIndeterminate = false;
+          uploadProgressStartTime = performance.now();
+          uploadProgressContainer.classList.remove('hidden');
+          uploadProgressContainer.setAttribute('aria-hidden', 'false');
+          if (uploadProgressBar) {
+            uploadProgressBar.classList.remove('animate-pulse');
+            uploadProgressBar.style.width = '0%';
+          }
+          if (uploadProgressPercent) {
+            uploadProgressPercent.textContent = '0%';
+          }
+          if (uploadProgressText) {
+            uploadProgressText.textContent = filename ? `Uploading ${filename}...` : 'Uploading...';
+          }
+        }
+
+        function updateUploadProgressDisplay(percent) {
+          if (!uploadProgressContainer) return;
+          const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+          if (uploadProgressProcessingShown) {
+            return;
+          }
+          uploadProgressIndeterminate = false;
+          if (uploadProgressBar) {
+            uploadProgressBar.classList.remove('animate-pulse');
+            uploadProgressBar.style.width = `${clamped}%`;
+          }
+          if (uploadProgressPercent) {
+            uploadProgressPercent.textContent = `${clamped}%`;
+          }
+        }
+
+        function setUploadProgressToIndeterminate(filename) {
+          if (!uploadProgressContainer || uploadProgressIndeterminate || uploadProgressProcessingShown) return;
+          uploadProgressIndeterminate = true;
+          if (uploadProgressBar) {
+            uploadProgressBar.classList.add('animate-pulse');
+            uploadProgressBar.style.width = '60%';
+          }
+          if (uploadProgressPercent) {
+            uploadProgressPercent.textContent = '--%';
+          }
+          if (uploadProgressText) {
+            uploadProgressText.textContent = filename ? `Uploading ${filename}...` : 'Uploading...';
+          }
+        }
+
+        function markUploadProcessing(message = 'Processing file...', label = 'Processing') {
+          if (!uploadProgressContainer) return;
+          uploadProgressProcessingShown = true;
+          uploadProgressIndeterminate = false;
+          if (uploadProgressBar) {
+            uploadProgressBar.classList.remove('animate-pulse');
+            uploadProgressBar.style.width = '100%';
+          }
+          if (uploadProgressPercent) {
+            uploadProgressPercent.textContent = label;
+          }
+          if (uploadProgressText) {
+            uploadProgressText.textContent = message;
+          }
+        }
+
+        function hideUploadProgress(delay = 600) {
+          if (!uploadProgressContainer) return;
+          const requestedDelay = Number(delay);
+          const elapsed = performance.now() - uploadProgressStartTime;
+          const timeout = requestedDelay === 0
+            ? 0
+            : Math.max(requestedDelay || 0, Math.max(0, MIN_PROGRESS_VISIBLE_MS - elapsed));
+          if (uploadProgressHideTimer) {
+            clearTimeout(uploadProgressHideTimer);
+          }
+            uploadProgressHideTimer = setTimeout(() => {
+            uploadProgressProcessingShown = false;
+            uploadProgressIndeterminate = false;
+            if (uploadProgressBar) {
+              uploadProgressBar.classList.remove('animate-pulse');
+              uploadProgressBar.style.width = '0%';
+            }
+            if (uploadProgressPercent) {
+              uploadProgressPercent.textContent = '0%';
+            }
+            if (uploadProgressText) {
+              uploadProgressText.textContent = 'Uploading...';
+            }
+            uploadProgressContainer.classList.add('hidden');
+            uploadProgressContainer.setAttribute('aria-hidden', 'true');
+            uploadProgressHideTimer = null;
+          }, timeout);
         }
 
 
@@ -456,7 +578,7 @@
                   </div>
                 `;
 
-                // Append containers in NEW ORDER: Analysis Ã¢â€ â€™ Code Ã¢â€ â€™ Viz Ã¢â€ â€™ Results Ã¢â€ â€™ Commentary
+                // Append containers in NEW ORDER: Analysis â†’ Code â†’ Viz â†’ Results â†’ Commentary
                 convoView.appendChild(containers.initial_response);
                 convoView.appendChild(containers.generated_code);
                 convoView.appendChild(containers.visualizations);
@@ -632,6 +754,48 @@
           convoView.scrollTop = convoView.scrollHeight;
         }
 
+        function sendUploadRequest(formData, {onProgress, onIndeterminate, onUploadComplete} = {}) {
+          return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/upload', true);
+            xhr.responseType = 'json';
+
+            let indeterminateNotified = false;
+
+            if (xhr.upload) {
+              xhr.upload.onprogress = (event) => {
+                if (event.lengthComputable && typeof onProgress === 'function') {
+                  const percent = (event.loaded / event.total) * 100;
+                  onProgress(percent);
+                } else if (!event.lengthComputable && typeof onIndeterminate === 'function' && !indeterminateNotified) {
+                  indeterminateNotified = true;
+                  onIndeterminate();
+                }
+              };
+              xhr.upload.onloadend = () => {
+                if (typeof onUploadComplete === 'function') {
+                  onUploadComplete();
+                }
+              };
+            }
+
+            xhr.onload = () => {
+              let payload = xhr.response;
+              if (payload == null || payload === '') {
+                payload = safeJsonParse(xhr.responseText);
+              } else if (typeof payload === 'string') {
+                payload = safeJsonParse(payload);
+              }
+              resolve({status: xhr.status, body: payload});
+            };
+
+            xhr.onerror = () => reject(new Error('Network error during upload'));
+            xhr.onabort = () => reject(new Error('Upload aborted'));
+
+            xhr.send(formData);
+          });
+        }
+
         async function uploadFile(file) {
           const formData = new FormData();
           formData.append('file', file);
@@ -643,22 +807,43 @@
             welcomeUploadPrompt.textContent = 'Preparing your file for analysis...';
           }
           setWelcomeStatus(`Uploading ${file.name}...`, 'pending');
+          startUploadProgress(file.name);
 
           try {
-            const response = await fetch('/upload', {
-              method: 'POST',
-              body: formData
+            const {status, body} = await sendUploadRequest(formData, {
+              onProgress: (percent) => {
+                const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+                updateUploadProgressDisplay(clamped);
+                if (!uploadProgressProcessingShown) {
+                  setWelcomeStatus(`Uploading ${file.name} (${clamped}%)`, 'pending');
+                }
+              },
+              onIndeterminate: () => {
+                if (!uploadProgressProcessingShown) {
+                  setUploadProgressToIndeterminate(file.name);
+                  setWelcomeStatus(`Uploading ${file.name}...`, 'pending');
+                }
+              },
+              onUploadComplete: () => {
+                markUploadProcessing(`Processing ${file.name}...`, 'Processing');
+                setWelcomeStatus(`Processing ${file.name}...`, 'pending');
+              }
             });
 
-            const result = await response.json();
+            const result = body || {};
 
-            if (response.ok) {
+            if (status >= 200 && status < 300) {
+              markUploadProcessing(`${file.name} ready for analysis`, 'Complete');
+              setWelcomeStatus(`${file.name} uploaded successfully`, 'success');
+
               currentFile = result.file_info;
               updateFileInfo(currentFile);
               revealConversationView();
               alert('File uploaded successfully!');
+              hideUploadProgress(700);
             } else {
               const detail = result.detail || 'Unknown error';
+              hideUploadProgress(0);
               setWelcomeStatus(`Could not upload ${file.name}: ${detail}`, 'error');
               if (welcomeUploadPrompt) {
                 welcomeUploadPrompt.textContent = defaultWelcomePrompt || 'Drag and drop a file here, or click to browse your device.';
@@ -666,6 +851,7 @@
               alert('Upload failed: ' + detail);
             }
           } catch (error) {
+            hideUploadProgress(0);
             const message = error && error.message ? error.message : 'Unexpected error';
             setWelcomeStatus(`Upload error: ${message}`, 'error');
             if (welcomeUploadPrompt) {

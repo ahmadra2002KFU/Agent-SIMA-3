@@ -159,6 +159,17 @@ No recent chats
 </div>
 </div>
 </div>
+<div id="upload-progress-container" class="hidden w-full px-6 md:px-8 lg:px-12 mt-6" role="status" aria-live="polite" aria-hidden="true">
+<div class="max-w-3xl mx-auto bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-4">
+<div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300 mb-2">
+<span id="upload-progress-text">Uploading...</span>
+<span id="upload-progress-percent">0%</span>
+</div>
+<div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+<div id="upload-progress-bar" class="h-full bg-primary rounded-full transition-all duration-150" style="width:0%"></div>
+</div>
+</div>
+</div>
 <div class="hidden flex-1 overflow-y-auto pb-4 px-4 relative z-10" id="chat-conversation-view">
 </div>
 <div class="mt-auto p-6 md:p-8 lg:p-12 pt-4 relative z-10">

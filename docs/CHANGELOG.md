@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.2] - 2025-10-09 - Excel Conversion Layer
+
+### Added
+
+- Automatic conversion pipeline for `.xlsx`/`.xls` uploads into normalized CSV files.
+- Normalized file metadata now exposes conversion status, processed filenames, and original storage paths.
+- Client-side upload progress indicator with streaming percentage updates for large files.
+- Regression coverage for Excel ingestion via `testing stuff/test_file_handler_xlsx.py`.
+
+### Fixed
+
+- Prevented repeated Excel parsing by reusing the converted CSV artefact throughout the backend workflow.
+
+---
+
 ## [2.3.1] - 2025-01-28 - Analysis Position Reverted
 
 ### 🔄 Display Order Adjustment
