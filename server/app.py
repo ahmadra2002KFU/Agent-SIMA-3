@@ -202,6 +202,19 @@ async def health() -> JSONResponse:
     return JSONResponse({"status": "ok"})
 
 
+@app.get("/health/lmstudio")
+async def health_lmstudio() -> JSONResponse:
+    """Check LM Studio health status."""
+    is_healthy = await lm_client.check_health()
+    return JSONResponse({
+        "status": "ok" if is_healthy else "unavailable",
+        "lm_studio": {
+            "running": is_healthy,
+            "url": lm_client.base_url
+        }
+    })
+
+
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)) -> JSONResponse:
     """Handle file upload."""
