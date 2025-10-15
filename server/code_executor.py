@@ -1,4 +1,4 @@
-"""
+﻿"""
 Sandboxed Python code execution environment for LLM-generated code.
 """
 import sys
@@ -280,6 +280,9 @@ class CodeExecutor:
     
     def _extract_results(self, namespace: Dict[str, Any]) -> Dict[str, Any]:
         """Extract important results from the execution namespace."""
+        def is_plotly_figure(obj: Any) -> bool:
+            return hasattr(obj, 'to_json') and hasattr(obj, 'show')
+
         results = {}
 
         # Look for common result variables
@@ -288,6 +291,9 @@ class CodeExecutor:
         for var_name in result_vars:
             if var_name in namespace:
                 value = namespace[var_name]
+                if is_plotly_figure(value):
+                    results[var_name] = "Visualization generated; see visualizations section."
+                    continue
                 results[var_name] = self._serialize_value(value)
 
         # Look for any plotly figures (avoid duplicates by tracking object IDs)
@@ -296,7 +302,7 @@ class CodeExecutor:
         seen_figures = {}  # Maps object_id -> (priority_score, name, value)
 
         for name, value in namespace.items():
-            if hasattr(value, 'to_json') and hasattr(value, 'show'):  # Likely a plotly figure
+            if is_plotly_figure(value):  # Likely a plotly figure
                 fig_id = id(value)
 
                 # Calculate priority score (lower is better)

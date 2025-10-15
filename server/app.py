@@ -2,9 +2,9 @@ import asyncio
 import json
 import logging
 import math
-import os
 from contextlib import asynccontextmanager
 from typing import Any, Dict
+from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
@@ -17,6 +17,88 @@ from rules_manager import rules_manager
 
 logger = logging.getLogger(__name__)
 
+BASE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = BASE_DIR.parent
+STATIC_DIR = PROJECT_ROOT / "static"
+INDEX_FILE = PROJECT_ROOT / "index.html"
+UPLOADS_DIR = PROJECT_ROOT / "uploads"
+
+CONTEXT_TRUNCATION_SUFFIX = "... [truncated]"
+ANALYSIS_SECTION_LIMIT = 2000
+CODE_SECTION_LIMIT = 6000
+OUTPUT_SECTION_LIMIT = 2000
+RESULT_SECTION_LIMIT = 2000
+
+def _truncate_for_context(value: Any, limit: int) -> str:
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        value = str(value)
+    value = value.strip()
+    if len(value) <= limit:
+        return value
+    return value[:limit] + CONTEXT_TRUNCATION_SUFFIX
+
+def _stringify_for_context(value: Any, limit: int) -> str:
+    if isinstance(value, (dict, list)):
+        try:
+            text_value = json.dumps(value, indent=2, default=str)
+        except Exception:
+            text_value = str(value)
+    else:
+        text_value = str(value)
+    return _truncate_for_context(text_value, limit)
+
+def _sanitize_execution_results_for_commentary(execution_results: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(execution_results, dict):
+        return {}
+    sanitized: Dict[str, Any] = {}
+    if "success" in execution_results:
+        sanitized["success"] = execution_results.get("success")
+    output_value = execution_results.get("output")
+    if output_value:
+        sanitized["output"] = _stringify_for_context(output_value, OUTPUT_SECTION_LIMIT)
+    results = execution_results.get("results")
+    if isinstance(results, dict):
+        summarized_results: Dict[str, Any] = {}
+        for key, value in results.items():
+            if isinstance(value, dict) and value.get("type") == "plotly_figure":
+                summarized_results[key] = {
+                    "note": "Plotly figure omitted from commentary context to keep prompt concise."
+                }
+            else:
+                summarized_results[key] = _stringify_for_context(value, RESULT_SECTION_LIMIT)
+        if summarized_results:
+            sanitized["results"] = summarized_results
+    executed_code = execution_results.get("executed_code")
+    if executed_code:
+        sanitized["executed_code"] = _stringify_for_context(executed_code, CODE_SECTION_LIMIT)
+    return sanitized
+
+def _format_execution_summary(execution_results: Dict[str, Any]) -> str:
+    if not execution_results:
+        return "No execution results available."
+    lines = []
+    success = execution_results.get("success")
+    if success is not None:
+        lines.append(f"Status: {'Success' if success else 'Failed'}")
+    output = execution_results.get("output")
+    if output:
+        lines.append("Console Output:")
+        lines.append(output)
+    results = execution_results.get("results")
+    if isinstance(results, dict) and results:
+        lines.append("Captured Results:")
+        for key, value in results.items():
+            if isinstance(value, dict) and value.get("note"):
+                note = value.get("note")
+                lines.append(f"- {key}: {note}")
+            else:
+                lines.append(f"- {key}: {value}")
+    else:
+        lines.append("Captured Results: None")
+    return "\n".join(lines)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -24,10 +106,10 @@ async def lifespan(app: FastAPI):
     logger.info("AI Sima Chatbot server starting up...")
 
     # Auto-load hospital_patients.csv if it exists
-    hospital_file_path = "../uploads/hospital_patients.csv"
-    if os.path.exists(hospital_file_path):
+    hospital_file_path = UPLOADS_DIR / "hospital_patients.csv"
+    if hospital_file_path.exists():
         logger.info(f"Auto-loading {hospital_file_path}...")
-        success = file_handler.set_current_file(hospital_file_path, "hospital_patients.csv")
+        success = file_handler.set_current_file(str(hospital_file_path), "hospital_patients.csv")
         if success:
             file_info = file_handler.get_current_file_info()
             logger.info(f"Successfully loaded hospital_patients.csv: {file_info['rows']} rows, {file_info['columns']} columns")
@@ -44,7 +126,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Local LLM Chatbot (POC)", lifespan=lifespan)
 
 # Mount static files to serve the logo
-app.mount("/static", StaticFiles(directory=".."), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # System prompt for the LLM
 SYSTEM_PROMPT = """You are an AI assistant specialized in data analysis and visualization.
@@ -57,11 +139,24 @@ CRITICAL RULES FOR CODE GENERATION:
 - If you need to reference the data, use 'df' directly
 - IMPORTANT: ALWAYS assign your final output/results to a variable named 'result' or 'output'
 - For visualizations, assign the figure to 'fig' or 'figure'
+- Always use plotly instead of matplotlib
+- Never use matplotlib under any circumstance
 
-When responding to user queries:
-1. First provide an initial response explaining what you plan to do
-2. Generate Python code if needed for analysis/visualization (ALWAYS use 'df' for data, never pd.read_csv)
-3. Provide commentary on results in natural language
+RESPONSE STRUCTURE - Generate in this order:
+1. **Generate Python code FIRST** - Write the code to solve the user's query
+   - Use 'df' for the pre-loaded data
+   - Assign final output to 'result', 'output', or 'fig'/'figure' for visualizations
+   - Keep code clean, efficient, and well-commented
+
+2. **Provide analysis/explanation SECOND** - Explain your approach and methodology
+   - Describe what the code does and why
+   - Explain the analytical approach taken
+   - Mention any assumptions or data transformations
+
+3. **Commentary on results** - This will be generated after code execution
+   - Interpret the results in context of the user's question
+   - Provide insights and additional context
+   - Highlight key findings
 
 You have access to pandas, plotly, numpy, and other data analysis libraries.
 Focus on creating high-quality, interactive visualizations when requested.
@@ -85,6 +180,13 @@ percent_change = calculate_change(admissions_by_year)
 result = {'admissions': admissions_by_year, 'change': percent_change}
 ```
 
+```python
+# CORRECT - for visualizations
+import plotly.express as px
+fig = px.bar(df.groupby('Nationality').size().reset_index(name='count'),
+             x='Nationality', y='count', title='Patient Distribution by Nationality')
+```
+
 NEVER do this:
 ```python
 # WRONG - do not try to read files
@@ -98,12 +200,25 @@ df.head(5)  # This won't capture the output!
 @app.get("/")
 async def root_index() -> FileResponse:
     # Serve the existing frontend file
-    return FileResponse("../index.html")
+    return FileResponse(INDEX_FILE)
 
 
 @app.get("/health")
 async def health() -> JSONResponse:
     return JSONResponse({"status": "ok"})
+
+
+@app.get("/health/lmstudio")
+async def health_lmstudio() -> JSONResponse:
+    """Check LM Studio health status."""
+    is_healthy = await lm_client.check_health()
+    return JSONResponse({
+        "status": "ok" if is_healthy else "unavailable",
+        "lm_studio": {
+            "running": is_healthy,
+            "url": lm_client.base_url
+        }
+    })
 
 
 @app.post("/upload")
@@ -371,7 +486,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
                     user_rules = rules_manager.get_rules_text()
 
                     # Step 1: Generate initial response and code
-                    await ws.send_json({"event": "delta", "field": "initial_response", "delta": "Analyzing your request and generating response..."})
+                    await ws.send_json({"event": "status", "field": "initial_response", "status": "analyzing"})
 
                     async for response_chunk in lm_client.generate_structured_response(
                         user_message=user_msg,
@@ -402,7 +517,8 @@ async def ws_endpoint(ws: WebSocket) -> None:
                     # Step 2: Execute generated code if any
                     execution_results = None
                     if field_content.get("generated_code", "").strip():
-                        await ws.send_json({"event": "delta", "field": "result_commentary", "delta": "Executing generated code..."})
+                        # Removed status message - skeleton loader handles visual feedback
+                        # await ws.send_json({"event": "delta", "field": "result_commentary", "delta": "Executing generated code..."})
 
                         # Get current dataframe if available
                         current_file = file_handler.current_file
@@ -422,9 +538,9 @@ async def ws_endpoint(ws: WebSocket) -> None:
                                 "executed_code": field_content["generated_code"]  # Include the actual code that was executed
                             }
 
-                            # Send execution status
-                            status_msg = "Code executed successfully. " if success else f"Code execution failed: {output[:100]}... "
-                            await ws.send_json({"event": "delta", "field": "result_commentary", "delta": status_msg})
+                            # Removed status message - skeleton loader handles visual feedback
+                            # status_msg = "Code executed successfully. " if success else f"Code execution failed: {output[:100]}... "
+                            # await ws.send_json({"event": "delta", "field": "result_commentary", "delta": status_msg})
                         except Exception as e:
                             logger.error(f"Code execution error: {str(e)}", exc_info=True)
                             execution_results = {
@@ -437,86 +553,41 @@ async def ws_endpoint(ws: WebSocket) -> None:
 
                     # Step 3: Generate commentary based on execution results
                     if execution_results:
-                        try:
-                            # Safely serialize execution results for the prompt
-                            serialized_results = json.dumps(execution_results, indent=2, default=str)
+                        sanitized_execution_results = _sanitize_execution_results_for_commentary(execution_results)
+                        execution_summary_text = _format_execution_summary(sanitized_execution_results)
+                        analysis_summary = _truncate_for_context(field_content.get("initial_response", ""), ANALYSIS_SECTION_LIMIT)
+                        if not analysis_summary:
+                            analysis_summary = "No analysis summary available."
 
-                            # Identify the primary result for focused commentary
-                            primary_result = None
-                            primary_result_key = None
-                            if execution_results.get('results'):
-                                # Look for the main result variable in priority order
-                                for key in ['result', 'output', 'summary', 'analysis']:
-                                    if key in execution_results['results']:
-                                        primary_result = execution_results['results'][key]
-                                        primary_result_key = key
-                                        break
+                        code_for_prompt = sanitized_execution_results.get("executed_code") or field_content.get("generated_code", "").strip()
+                        if code_for_prompt:
+                            code_for_prompt = _truncate_for_context(code_for_prompt, CODE_SECTION_LIMIT)
+                        else:
+                            code_for_prompt = "# No code generated."
 
-                            # Create enhanced commentary prompt with original query context
-                            primary_result_section = ""
-                            if primary_result is not None:
-                                primary_result_section = f"""
-PRIMARY RESULT:
-The main calculation result is: {primary_result} (stored in variable '{primary_result_key}')
-
-"""
-
-                            commentary_prompt = f"""Analyze and interpret the following complete code execution context for the user's query:
-
-ORIGINAL USER QUERY: "{user_msg}"
-
-{primary_result_section}EXECUTED CODE:
-```python
-{execution_results.get('executed_code', 'No code available')}
-```
-
-EXECUTION RESULTS:
-{serialized_results}
-
-COMMENTARY INSTRUCTIONS:
-1. START with the primary result: Answer the user's original question directly
-2. EXPLAIN the methodology: Describe how the code achieved this result
-3. PROVIDE context: Add relevant insights about the analysis approach
-
-The primary result ({primary_result}) directly answers the user's query "{user_msg}". Focus your commentary on explaining this result in the context of what the user asked for."""
-                        except Exception as e:
-                            logger.error(f"Failed to serialize execution results: {str(e)}", exc_info=True)
-                            # Fallback to basic string representation with primary result focus
-                            primary_result = None
-                            primary_result_key = None
-                            if execution_results.get('results'):
-                                for key in ['result', 'output', 'summary', 'analysis']:
-                                    if key in execution_results['results']:
-                                        primary_result = execution_results['results'][key]
-                                        primary_result_key = key
-                                        break
-
-                            primary_result_section = ""
-                            if primary_result is not None:
-                                primary_result_section = f"""
-PRIMARY RESULT:
-The main calculation result is: {primary_result} (stored in variable '{primary_result_key}')
-
-"""
-
-                            commentary_prompt = f"""Analyze and interpret the following code execution context for the user's query:
-
-ORIGINAL USER QUERY: "{user_msg}"
-
-{primary_result_section}EXECUTED CODE:
-```python
-{execution_results.get('executed_code', 'No code available')}
-```
-
-EXECUTION RESULTS:
-{str(execution_results)}
-
-COMMENTARY INSTRUCTIONS:
-1. START with the primary result: Answer the user's original question directly
-2. EXPLAIN the methodology: Describe how the code achieved this result
-3. PROVIDE context: Add relevant insights about the analysis approach
-
-The primary result ({primary_result}) directly answers the user's query "{user_msg}". Focus your commentary on explaining this result in the context of what the user asked for."""
+                        prompt_parts = [
+                            "Interpret the analysis results for the user.",
+                            "",
+                            f'ORIGINAL USER QUERY: "{user_msg}"',
+                            "",
+                            "ANALYSIS SUMMARY:",
+                            analysis_summary,
+                            "",
+                            "GENERATED CODE:",
+                            "```python",
+                            code_for_prompt,
+                            "```",
+                            "",
+                            "EXECUTION SUMMARY:",
+                            execution_summary_text,
+                            "",
+                            "COMMENTARY INSTRUCTIONS:",
+                            "1. Start with the direct answer to the user's question.",
+                            "2. Explain the methodology by referencing the code and outputs.",
+                            "3. Provide relevant context or next steps based on the findings.",
+                            "4. If a visualization was generated, describe its key takeaway using the execution summary (raw figure data is omitted).",
+                        ]
+                        commentary_prompt = "\n".join(prompt_parts)
 
                         async for response_chunk in lm_client.generate_structured_response(
                             user_message=commentary_prompt,
@@ -532,7 +603,7 @@ EXAMPLE for "What is the average age of American patients?":
 "The average age of American patients is 54.8 years. The code calculated this by filtering for patients with 'American' nationality and using a custom age calculation function that computed age at admission by comparing Date_of_Birth with Admission_Date, accounting for whether the birthday had occurred yet in the admission year."
 
 CRITICAL: The primary result must be interpreted in the context of the original user query. If the user asks for "average age", the result represents age in years, not a percentage or count.""",
-                            code_execution_results=execution_results,
+                            code_execution_results=sanitized_execution_results,
                             user_rules=user_rules,
                             initial_response_temp=0.5,
                             generated_code_temp=0.3,

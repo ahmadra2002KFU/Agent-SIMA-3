@@ -13,6 +13,7 @@ import json
 import logging
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Dict, Any, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, HTTPException
@@ -36,6 +37,11 @@ from server.rules_manager import rules_manager
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+BASE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = BASE_DIR.parent
+STATIC_DIR = PROJECT_ROOT / "static"
+INDEX_FILE = PROJECT_ROOT / "index.html"
 
 # System prompt for LLM
 SYSTEM_PROMPT = """You are an expert data analyst AI assistant. Your task is to analyze data and provide insights through a structured 3-layer approach:
@@ -90,13 +96,13 @@ app = FastAPI(
 )
 
 # Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 @app.get("/")
 async def serve_index():
     """Serve the main application page."""
-    return FileResponse("index.html")
+    return FileResponse(INDEX_FILE)
 
 
 @app.get("/health")

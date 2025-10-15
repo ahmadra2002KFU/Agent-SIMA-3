@@ -9,6 +9,7 @@ from pathlib import Path
 import logging
 
 from metadata_extractor import metadata_extractor
+from xlsx_converter import convert_excel_to_csv
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +17,8 @@ logger = logging.getLogger(__name__)
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-# Maximum file size (10MB)
-MAX_FILE_SIZE = 10 * 1024 * 1024
+# Maximum file size (25MB)
+MAX_FILE_SIZE = 25 * 1024 * 1024
 
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {'.csv', '.xlsx', '.xls'}
@@ -84,7 +85,7 @@ class FileHandler:
             logger.error(f"Error saving file: {e}")
             return False, f"Error saving file: {str(e)}", None
     
-    def load_file_data(self, file_path: str) -> tuple[bool, str, Optional[pd.DataFrame]]:
+    def load_file_data(self, file_path: str) -> tuple[bool, str, Optional[pd.DataFrame], Optional[str]]:
         """
         Load data from uploaded file.
         
@@ -92,33 +93,40 @@ class FileHandler:
             file_path: Path to the uploaded file
             
         Returns:
-            Tuple of (success, message, dataframe)
+            Tuple of (success, message, dataframe, processed_path)
         """
         try:
             file_ext = Path(file_path).suffix.lower()
+            processed_path: Optional[str] = None
+            df: Optional[pd.DataFrame] = None
             
             if file_ext == '.csv':
                 # Try different encodings for CSV files
                 for encoding in ['utf-8', 'latin-1', 'cp1252']:
                     try:
                         df = pd.read_csv(file_path, encoding=encoding)
+                        processed_path = file_path
                         break
                     except UnicodeDecodeError:
                         continue
                 else:
-                    return False, "Could not decode CSV file with any supported encoding", None
+                    return False, "Could not decode CSV file with any supported encoding", None, None
                     
             elif file_ext in ['.xlsx', '.xls']:
-                df = pd.read_excel(file_path)
+                df, csv_path = convert_excel_to_csv(file_path, output_dir=UPLOAD_DIR)
+                processed_path = csv_path
             else:
-                return False, f"Unsupported file extension: {file_ext}", None
+                return False, f"Unsupported file extension: {file_ext}", None, None
+
+            if df is None:
+                return False, "Failed to load file into dataframe", None, None
             
             logger.info(f"Loaded data: {df.shape[0]} rows, {df.shape[1]} columns")
-            return True, "File loaded successfully", df
+            return True, "File loaded successfully", df, processed_path
             
         except Exception as e:
             logger.error(f"Error loading file: {e}")
-            return False, f"Error loading file: {str(e)}", None
+            return False, f"Error loading file: {str(e)}", None, None
     
     def set_current_file(self, file_path: str, original_filename: str) -> bool:
         """
@@ -132,20 +140,34 @@ class FileHandler:
             Success status
         """
         try:
-            success, message, df = self.load_file_data(file_path)
+            success, message, df, processed_path = self.load_file_data(file_path)
             if not success:
+                logger.error("Failed to load file '%s': %s", original_filename, message)
                 return False
             
             # Extract metadata
             metadata = metadata_extractor.extract_metadata(df, original_filename)
 
+            stored_path = processed_path or file_path
+
             self.current_file = {
-                'path': file_path,
+                'path': stored_path,
+                'original_path': file_path,
                 'original_filename': original_filename,
+                'processed_filename': Path(stored_path).name,
                 'dataframe': df,
                 'metadata': metadata,
                 'upload_time': pd.Timestamp.now()
             }
+
+            if stored_path != file_path:
+                self.current_file.update({
+                    'converted': True,
+                    'processed_extension': Path(stored_path).suffix.lower(),
+                    'original_extension': Path(file_path).suffix.lower()
+                })
+            else:
+                self.current_file['converted'] = False
             
             return True
             
@@ -159,14 +181,27 @@ class FileHandler:
             return None
 
         df = self.current_file['dataframe']
+        stored_path = self.current_file.get('path')
+        original_path = self.current_file.get('original_path', stored_path)
+
+        size_mb = round(os.path.getsize(stored_path) / (1024 * 1024), 2) if stored_path and os.path.exists(stored_path) else None
+        original_size_mb = None
+        if original_path and original_path != stored_path and os.path.exists(original_path):
+            original_size_mb = round(os.path.getsize(original_path) / (1024 * 1024), 2)
 
         return {
             'filename': self.current_file['original_filename'],
             'path': self.current_file['path'],
+            'original_path': original_path,
             'upload_time': self.current_file['upload_time'].isoformat(),
             'rows': len(df),
             'columns': len(df.columns),
-            'size_mb': round(os.path.getsize(self.current_file['path']) / (1024 * 1024), 2)
+            'size_mb': size_mb,
+            'converted': self.current_file.get('converted', False),
+            'processed_filename': self.current_file.get('processed_filename'),
+            'original_extension': self.current_file.get('original_extension'),
+            'processed_extension': self.current_file.get('processed_extension'),
+            'original_size_mb': original_size_mb
         }
 
     def get_current_file_metadata(self) -> Optional[Dict[str, Any]]:
@@ -178,13 +213,24 @@ class FileHandler:
     
     def clear_current_file(self):
         """Clear the current file from memory."""
-        if self.current_file and os.path.exists(self.current_file['path']):
-            try:
-                os.remove(self.current_file['path'])
-                logger.info(f"Deleted file: {self.current_file['path']}")
-            except Exception as e:
-                logger.error(f"Error deleting file: {e}")
-        
+        if self.current_file:
+            paths_to_delete = set()
+            stored_path = self.current_file.get('path')
+            original_path = self.current_file.get('original_path')
+
+            if stored_path:
+                paths_to_delete.add(stored_path)
+            if original_path:
+                paths_to_delete.add(original_path)
+
+            for path in paths_to_delete:
+                if path and os.path.exists(path):
+                    try:
+                        os.remove(path)
+                        logger.info(f"Deleted file: {path}")
+                    except Exception as e:
+                        logger.error(f"Error deleting file '{path}': {e}")
+
         self.current_file = None
 
 

@@ -2,6 +2,220 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.2] - 2025-10-09 - Excel Conversion Layer
+
+### Added
+
+- Automatic conversion pipeline for `.xlsx`/`.xls` uploads into normalized CSV files.
+- Normalized file metadata now exposes conversion status, processed filenames, and original storage paths.
+- Client-side upload progress indicator with streaming percentage updates for large files.
+- Upload flow now shows a dedicated upload progress bar alongside a separate processing indicator for clearer UX feedback.
+- Replaced native `alert()` popups with styled toast notifications that match the app's visual language.
+- Regression coverage for Excel ingestion via `testing stuff/test_file_handler_xlsx.py`.
+
+### Fixed
+
+- Prevented repeated Excel parsing by reusing the converted CSV artefact throughout the backend workflow.
+
+---
+
+## [2.3.1] - 2025-01-28 - Analysis Position Reverted
+
+### 🔄 Display Order Adjustment
+
+**CHANGED**: Moved Analysis section back to the first position, before Python Code block.
+
+### ✨ New Output Order
+
+The display order has been adjusted based on user feedback:
+
+1. **Analysis** (FIRST) - LLM explains the approach and methodology
+2. **Python Code Block** (SECOND) - Generated code for execution
+3. **Visualizations** (THIRD, conditional) - Charts and graphs when generated
+4. **Results Block** (FOURTH) - Prominent display of final answer
+5. **Commentary** (FIFTH) - Additional insights and context
+
+### 🎯 Rationale
+
+- **Context First**: Users see the explanation before the implementation
+- **Better Understanding**: Analysis provides context for the code that follows
+- **Improved Learning**: Understanding the approach before seeing the code
+- **User Preference**: Based on direct user feedback
+
+### 🔧 Technical Changes
+
+**Frontend Changes (index.html):**
+- Reordered container creation (lines 1066-1116)
+- Updated appendChild sequence (lines 1151-1156)
+- Updated comments to reflect new order
+
+### 🔄 Backward Compatibility
+
+- ✅ No breaking changes to backend or API
+- ✅ All existing functionality preserved
+- ✅ Skeleton loader still works correctly
+- ✅ Results Block behavior unchanged
+
+---
+
+## [2.3.0] - 2025-01-28 - Skeleton Loader for Code Execution
+
+### 🎨 UX Enhancement: Professional Loading Animation
+
+**IMPLEMENTED**: Replaced plain text status messages with an elegant skeleton loader animation during code execution, providing a more polished and professional user experience.
+
+### ✨ New Features
+
+**Skeleton Loader Animation:**
+- **Shimmer Effect**: Smooth, continuous animation that indicates active processing
+- **Gradient Background**: Matches the Results Block styling for visual consistency
+- **Automatic Display**: Shows immediately when code execution starts
+- **Seamless Transition**: Smoothly replaced by actual results when execution completes
+- **Dark Mode Support**: Optimized animation for both light and dark themes
+
+### 🔧 Technical Implementation
+
+**Removed:**
+- ❌ Plain text message: "Executing generated code..." (frontend + backend)
+- ❌ Plain text message: "Code executed successfully." (frontend + backend)
+
+**Added:**
+- ✅ CSS `@keyframes shimmer` animation with gradient background
+- ✅ Skeleton loader container with two animated bars (value + label placeholders)
+- ✅ Automatic show/hide logic in `handleFinalResponse()` function
+- ✅ Error handling to hide skeleton on execution failures
+
+**Frontend Changes (index.html):**
+- Added skeleton loader CSS with shimmer animation (lines 304-359)
+- Updated Results Block HTML structure with skeleton and actual results containers
+- Modified `handleFinalResponse()` to show skeleton during execution
+- Updated `displayResultsBlock()` to hide skeleton and show actual results
+- Implemented proper error handling to clean up skeleton on failures
+
+**Backend Changes (server/app.py):**
+- Commented out WebSocket delta message for "Executing generated code..." (line 425)
+- Commented out WebSocket delta message for "Code executed successfully." (lines 446-447)
+- Prevents status text from appearing in Commentary section
+- Skeleton loader now provides all visual feedback without text pollution
+
+### 📊 User Experience Improvements
+
+**Before:**
+```
+[Plain text] "Executing generated code..."
+[Wait...]
+[Plain text] "Code executed successfully."
+[Results appear]
+```
+
+**After:**
+```
+[Animated skeleton with shimmer effect appears]
+[Smooth loading animation...]
+[Skeleton fades out, results fade in]
+```
+
+### 🎯 Benefits
+
+- **Professional Appearance**: Modern skeleton loader matches industry-standard UX patterns
+- **Improved Perceived Performance**: Visual feedback reduces perceived wait time
+- **Better Visual Hierarchy**: Skeleton matches Results Block dimensions and styling
+- **Reduced Cognitive Load**: No need to read status messages, visual animation is self-explanatory
+- **Consistent Branding**: Gradient colors match the AI Sima design system
+
+### 🔄 Backward Compatibility
+
+- ✅ No breaking changes to backend or API
+- ✅ Graceful degradation if JavaScript fails
+- ✅ Maintains all existing functionality
+- ✅ Error handling ensures clean UI state
+
+---
+
+## [2.2.0] - 2025-01-28 - Enhanced Output Format and Display Order
+
+### 🎯 Revolutionary UI/UX Improvement: Code-First Display Architecture
+
+**IMPLEMENTED**: Complete redesign of the 3-layer processing system's output format and execution order to prioritize code visibility and provide a prominent Results Block for final answers.
+
+### ✨ New Output Order
+
+The system now displays responses in the following optimized order:
+
+1. **Python Code Block** (FIRST) - Generated code with syntax highlighting and copy functionality
+2. **Plot/Visualization** (SECOND, conditional) - Interactive Plotly charts (only shown when generated)
+3. **Analysis** (THIRD) - LLM's explanation of the approach and methodology
+4. **Results Block** (FOURTH, NEW) - Prominent display of the final answer/output
+5. **Commentary** (FIFTH) - Additional context and interpretation of results
+
+### 🎨 New Results Block Component
+
+**NEW FEATURE**: Dedicated Results Block with premium styling:
+- **Prominent Display**: Large, bold text with gradient background
+- **Automatic Extraction**: Intelligently extracts primary result from execution (`result`, `output`, `summary`, etc.)
+- **Smart Formatting**: Numbers formatted with locale-specific separators and precision
+- **Visual Hierarchy**: Distinct from commentary for immediate answer visibility
+- **Conditional Display**: Only shown when a primary result is available
+
+### 🔧 Technical Implementation
+
+**Frontend Changes (index.html):**
+- Reordered container creation and DOM appending for new visual sequence
+- Added `results_block` container with gradient styling and prominent typography
+- Implemented `displayResultsBlock()` function to extract and format primary results
+- Updated container labels: "Results & Commentary" split into "Results" and "Commentary"
+- Maintained backward compatibility with existing WebSocket streaming
+
+**Backend Changes (server/app.py):**
+- Enhanced SYSTEM_PROMPT to emphasize code-first generation
+- Updated response structure instructions for LLM
+- Added explicit guidance: "Generate Python code FIRST, then provide analysis"
+- Included visualization examples in system prompt
+- Maintained all existing field names for backward compatibility
+
+### 📊 User Experience Improvements
+
+**Before Enhancement:**
+```
+1. Analysis: "I will filter the data for Saudi patients..."
+2. Code: saudi_patients = df[df['Nationality'].str.contains('Saudi')]...
+3. Results & Commentary: "The analysis found 54 Saudi patients. This represents..."
+```
+
+**After Enhancement:**
+```
+1. Code: saudi_patients = df[df['Nationality'].str.contains('Saudi')]...
+2. [Visualization if applicable]
+3. Analysis: "I filtered the Nationality column using string matching..."
+4. Results: 54 (in large, prominent display)
+5. Commentary: "This represents 18% of the total patient population..."
+```
+
+### 🎯 Benefits
+
+- **Immediate Code Visibility**: Users see the generated code first, understanding the approach immediately
+- **Prominent Results**: Final answers displayed in a visually distinct, easy-to-read format
+- **Better Learning**: Code-first approach helps users learn data analysis techniques
+- **Conditional Visualizations**: Charts only appear when relevant, reducing clutter
+- **Clear Separation**: Results and commentary are now distinct sections for better readability
+- **Professional Appearance**: Gradient backgrounds and premium styling for results block
+
+### 🔄 Backward Compatibility
+
+- All existing WebSocket message formats maintained
+- No changes to backend streaming logic
+- Field names unchanged (`initial_response`, `generated_code`, `result_commentary`)
+- Existing functionality fully preserved
+- Only visual presentation order modified
+
+### 📈 Impact
+
+- **Enhanced Clarity**: Users immediately see what code will be executed
+- **Better Transparency**: Code-first approach builds trust in AI-generated analysis
+- **Improved Accessibility**: Large, bold results are easier to read and understand
+- **Professional UX**: Premium styling matches modern data analysis tools
+- **Flexible Display**: Conditional sections reduce visual noise
+
 ## [2.1.5] - 2025-01-28 - Sidebar Toggle Functionality
 
 ### 🎛️ Enhanced User Interface with Collapsible Sidebar

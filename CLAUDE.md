@@ -20,6 +20,8 @@ pip install fastapi uvicorn[standard] pandas openpyxl plotly requests aiofiles w
 ```
 
 ### Running the Application
+
+#### Main Application (Python/FastAPI)
 ```bash
 # Start the server (from project root)
 cd server
@@ -30,8 +32,13 @@ Run.bat                    # Opens browser automatically
 Run.bat --no-open         # Skip browser auto-open
 ```
 
+The application runs on `http://127.0.0.1:8010` with the primary frontend in `index.html`.
+
 ### Testing
 ```bash
+# All test files are in the "testing stuff" directory
+cd "testing stuff"
+
 # Run comprehensive test suite
 python test_comprehensive_suite.py
 
@@ -42,23 +49,34 @@ python test_rules_system.py        # Test rules management
 python test_frontend_integration.py # Test frontend integration
 python test_send_button.py         # Test send button functionality
 python test_new_architecture.py    # Test validation/serialization/streaming architecture
+python test_live_backend.py        # Test against running backend
+python test_running_server.py      # Test running server
 ```
 
 ## Architecture Overview
 
 ### 3-Layer Processing System
-The application implements a sophisticated 3-layer data analysis pipeline:
+The application implements a sophisticated 3-layer data analysis pipeline with optimized output display:
 
-1. **Layer 1 (Metadata Extraction)**: Analyzes uploaded files using `metadata_extractor.py` to extract comprehensive metadata, statistics, and data quality indicators.
+**Layer 1 (Metadata Extraction)**: Analyzes uploaded files using `metadata_extractor.py` to extract comprehensive metadata, statistics, and data quality indicators.
 
-2. **Layer 2 (Code Generation & Execution)**: Uses `code_executor.py` to safely execute Python code in a sandboxed environment with restricted imports and timeout protection.
+**Layer 2 (Code Generation & Execution)**: Uses `code_executor.py` to safely execute Python code in a sandboxed environment with restricted imports and timeout protection.
 
-3. **Layer 3 (Results Commentary)**: Leverages the LLM to provide natural language interpretation of analysis results through `lm_studio_client.py`.
+**Layer 3 (Results Commentary)**: Leverages the LLM to provide natural language interpretation of analysis results through `lm_studio_client.py`.
+
+### Response Display Order (v2.3.1+)
+Responses are displayed in this optimized sequence:
+1. **Analysis** - LLM's explanation of the approach
+2. **Python Code Block** - Generated code with syntax highlighting and copy functionality
+3. **Plot/Visualization** - Interactive Plotly charts (conditional, when applicable)
+4. **Results Block** - Prominent display of final answer with gradient background and skeleton loader during execution
+5. **Commentary** - Additional context and interpretation
 
 ### WebSocket Streaming Architecture
 - **Real-time streaming**: Implements incremental JSON parsing in `lm_studio_client.py` for immediate response rendering
 - **Delta-based updates**: Frontend receives only new content chunks, not full responses
 - **Field-by-field streaming**: Analysis, code, and results stream independently as they become available
+- **Event types**: `start`, `delta`, `replace`, `field_complete`, `end`, `stream_error`, `warnings`
 
 ### Key Components
 
@@ -79,6 +97,8 @@ The application implements a sophisticated 3-layer data analysis pipeline:
 
 #### Frontend
 - **`index.html`**: Single-page frontend with Tailwind CSS, collapsible sidebar (Ctrl/Cmd+B), and real-time WebSocket handling with incremental content rendering
+- **Skeleton loader animations**: Professional loading states during code execution (v2.3.0+)
+- **AI Sima branding**: Integrated logo with consistent visual identity
 
 ## Critical Implementation Details
 
@@ -127,25 +147,40 @@ Messages follow a structured JSON format with streaming support:
 }
 ```
 
-**Event Types**: `start`, `delta`, `replace`, `field_complete`, `end`, `stream_error`, `warnings`
-
 ### Plotly Integration
 - Frontend uses Plotly 2.30.1 (fixed version for compatibility)
 - Backend suppresses `fig.show()` to prevent browser tab spawning
 - Visualizations are serialized as JSON and rendered client-side
 - Serialization engine handles Plotly figure conversion automatically
 
+### Skeleton Loader Feature (v2.3.0+)
+Professional shimmer animation during code execution in Results Block:
+- **GPU-accelerated CSS animation** with 2-second cycle
+- **Matches Results Block styling** for smooth transitions
+- **Dark mode support** with automatic theme adaptation
+- **Smart display logic**: Shows during execution, hides when results ready
+- Located in Results Block (`#results-skeleton` container)
+
 ## File Structure Conventions
 
 ### Data Files
 - Sample datasets in root: `hospital_patients.csv`, `comprehensive_test_data.csv`
 - Uploaded files stored in `uploads/` directory
-- Configuration persisted in `config/rules.json`
+- Configuration persisted in `config/rules.json` and `server/config/rules.json`
 
 ### Frontend Resources
-- Single-page application: `index.html`
-- Uses CDN resources: Tailwind CSS, Material Icons, Plotly 2.30.1
-- WebSocket connection management with automatic reconnection
+- **Primary Frontend**: Single-page application in root `index.html`
+  - Uses CDN resources: Tailwind CSS, Material Icons, Plotly 2.30.1, Prism.js for syntax highlighting
+  - WebSocket connection management with automatic reconnection
+  - Collapsible sidebar with `Ctrl/Cmd+B` shortcut
+  - Professional branding with AI Sima logo
+
+### Directory Structure
+- `server/`: Python FastAPI backend application
+- `testing stuff/`: All test files and test utilities
+- `uploads/`: File upload storage
+- `config/`: Configuration files
+- `docs/`: Documentation including architecture, changelogs, and feature docs (e.g., `SKELETON_LOADER.md`)
 
 ## LM Studio Integration
 
@@ -160,40 +195,38 @@ The system prompt enforces a specific JSON structure for consistent streaming an
 ## Advanced Architecture Patterns
 
 ### Reliability & Fault Tolerance
-The application implements multiple layers of reliability:
 
-1. **Circuit Breaker Pattern** (`error_handler.py`):
-   - Monitors component health (LM Studio, code executor, serialization, validation, file handler)
-   - Automatically opens circuits after repeated failures (configurable thresholds)
-   - Prevents cascading failures across system components
-   - Provides graceful degradation when components fail
-   - Component states: HEALTHY → DEGRADED → FAILING → CIRCUIT_OPEN → RECOVERING
+**Circuit Breaker Pattern** (`error_handler.py`):
+- Monitors component health (LM Studio, code executor, serialization, validation, file handler)
+- Automatically opens circuits after repeated failures (configurable thresholds)
+- Prevents cascading failures across system components
+- Component states: HEALTHY → DEGRADED → FAILING → CIRCUIT_OPEN → RECOVERING
 
-2. **Atomic Response Processing** (`response_manager.py`):
-   - Collects complete LLM responses before validation
-   - Validates all content (syntax, security, structure) before streaming
-   - Implements automatic recovery for common issues (escape sequences, syntax errors)
-   - Performs complete rollback if validation fails
-   - Response states: INITIALIZING → COLLECTING → VALIDATING → VALIDATED → STREAMING → COMPLETED
+**Atomic Response Processing** (`response_manager.py`):
+- Collects complete LLM responses before validation
+- Validates all content (syntax, security, structure) before streaming
+- Implements automatic recovery for common issues (escape sequences, syntax errors)
+- Performs complete rollback if validation fails
+- Response states: INITIALIZING → COLLECTING → VALIDATING → VALIDATED → STREAMING → COMPLETED
 
-3. **Validation Engine** (`validation_engine.py`):
-   - JSON structure validation with auto-fix for common formatting errors
-   - Python syntax validation with AST parsing
-   - Security validation blocking dangerous operations
-   - Escape sequence cleaning for corrupted code
-   - Auto-fix capabilities for: trailing backslashes, unclosed structures, malformed escape sequences
+**Validation Engine** (`validation_engine.py`):
+- JSON structure validation with auto-fix for common formatting errors
+- Python syntax validation with AST parsing
+- Security validation blocking dangerous operations
+- Escape sequence cleaning for corrupted code
+- Auto-fix capabilities for: trailing backslashes, unclosed structures, malformed escape sequences
 
-4. **Serialization Engine** (`serialization_engine.py`):
-   - Safe handling of Plotly figures, DataFrames, NumPy arrays
-   - NaN/Infinity value handling for JSON compatibility
-   - Prevention of circular reference errors
-   - Automatic type conversion for WebSocket transmission
+**Serialization Engine** (`serialization_engine.py`):
+- Safe handling of Plotly figures, DataFrames, NumPy arrays
+- NaN/Infinity value handling for JSON compatibility
+- Prevention of circular reference errors
+- Automatic type conversion for WebSocket transmission
 
-5. **Streaming Controller** (`streaming_controller.py`):
-   - Atomic WebSocket operations with error recovery
-   - Delta-based content streaming (8-character chunks, 20ms delay)
-   - Stream state tracking and monitoring
-   - Graceful error handling during streaming
+**Streaming Controller** (`streaming_controller.py`):
+- Atomic WebSocket operations with error recovery
+- Delta-based content streaming (8-character chunks, 20ms delay)
+- Stream state tracking and monitoring
+- Graceful error handling during streaming
 
 ### Response Processing Flow
 ```
@@ -227,14 +260,6 @@ WebSocket → Frontend (Incremental rendering)
 4. **LM Studio Failures**: Fallback responses, circuit breaker prevents repeated calls
 5. **Code Execution Errors**: Timeout protection, security validation, result capture
 
-## Known Test Coverage
-- Simple data analysis: 4/4 tests passing
-- Advanced analysis: 3/4 tests passing
-- Visualization: 3/4 tests passing
-- File operations: 4/4 tests passing
-- Rules system: 3/3 tests passing
-- Overall success rate: 89.7%
-
 ## Key Development Considerations
 
 ### When Modifying Core Processing
@@ -262,8 +287,37 @@ WebSocket → Frontend (Incremental rendering)
 - Check server logs for auto-load success/failure messages
 
 ### Important System Prompts
-The system prompt in `app.py` (lines 50-95) is critical for proper LLM behavior:
+The system prompt in `app.py` is critical for proper LLM behavior:
 - Instructs LLM to use pre-loaded `df` variable (NEVER `pd.read_csv()`)
 - Requires assignment to `result`/`output`/`fig` variables
 - Defines the 3-layer response structure
 - This prompt should be modified carefully as it affects all LLM-generated code
+
+### Context Truncation
+`app.py` implements intelligent context truncation to prevent token overflow:
+- Analysis: 2000 chars
+- Code: 6000 chars
+- Output: 2000 chars
+- Result: 2000 chars
+- Plotly figures omitted from commentary context with placeholder note
+
+### Batch Scripts (Windows)
+- **`Run.bat`**: Starts the server with environment validation
+  - Checks for virtual environment and LM Studio availability
+  - Auto-opens browser by default (use `--no-open` to skip)
+  - Provides helpful error messages for missing dependencies
+- **`Setup.bat`**: Creates virtual environment and installs dependencies
+
+## Recent Improvements (v2.3.x)
+
+### UI/UX Enhancements
+- Skeleton loader animations with GPU-accelerated shimmer effect
+- Premium input design with improved animations
+- Enhanced commentary handling with reveal functions and timers
+- Optimized response display order prioritizing code visibility
+
+### Architecture Refinements
+- Comprehensive context truncation to manage token limits
+- Improved error handling in response processing
+- Enhanced result extraction and formatting
+- Better separation of Results Block and Commentary sections
