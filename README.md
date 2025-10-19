@@ -1,6 +1,6 @@
-# LLM-Powered Chatbot Web Interface
+# AI Sima - Cloud-Powered Data Analysis Chatbot
 
-A comprehensive local LLM-powered chatbot web interface with advanced file processing, real-time streaming, and interactive data analysis capabilities.
+A comprehensive cloud-powered chatbot web interface with advanced file processing, real-time streaming, and interactive data analysis capabilities. Powered by Groq API with Kimi K2 model.
 
 ## 🌟 Features
 
@@ -29,10 +29,38 @@ A comprehensive local LLM-powered chatbot web interface with advanced file proce
 
 ### Prerequisites
 - Python 3.8 or higher
-- LM Studio running locally on port 1234
+- Internet connection (for Groq API access)
 - Modern web browser with WebSocket support
 
 ### Installation
+
+#### Windows (Automated Setup)
+
+1. **Clone the repository**:
+```bash
+git clone <repository-url>
+cd Agent-SIMA-3
+```
+
+2. **Run Setup.bat**:
+```bash
+Setup.bat
+```
+This will:
+- Create a virtual environment
+- Install all required dependencies
+- Prepare the application for first run
+
+3. **Run the application**:
+```bash
+Run.bat
+```
+This will:
+- Activate the virtual environment
+- Start the server on port 8010
+- Open your browser automatically
+
+#### Manual Setup (All Platforms)
 
 1. **Clone the repository**:
 ```bash
@@ -51,44 +79,47 @@ source .venv/bin/activate
 
 3. **Install dependencies**:
 ```bash
-pip install fastapi uvicorn[standard] pandas openpyxl plotly requests aiofiles websockets python-multipart aiohttp
+pip install fastapi uvicorn[standard] pandas openpyxl plotly requests aiofiles websockets python-multipart aiohttp numpy
 ```
 
-4. **Start LM Studio**:
-   - Download and install LM Studio
-   - Load a compatible model (e.g., Qwen, Llama, etc.)
-   - Start the local server on port 1234
-
-5. **Start the application**:
+4. **Start the application**:
 ```bash
 cd server
 uvicorn app:app --host 127.0.0.1 --port 8010
 ```
 
-6. **Open your browser**:
+5. **Open your browser**:
    Navigate to `http://localhost:8010`
 
 
 ## 🧭 From zero to running (Windows tutorial)
 
+### Automated Setup (Recommended)
+1. Open PowerShell in the project root (Agent-SIMA-3)
+2. Run `Setup.bat` to install dependencies
+3. Run `Run.bat` to start the application
+4. Browser opens automatically to http://127.0.0.1:8010
+
+### Manual Setup
 1. Open PowerShell in the project root (Agent-SIMA-3)
 2. Create and activate venv:
    - `python -m venv .venv`
    - `.\.venv\Scripts\Activate.ps1`
 3. Install deps:
-   - `pip install -r requirements.txt` if available; otherwise:
-   - `pip install fastapi uvicorn[standard] pandas openpyxl plotly requests aiofiles websockets python-multipart aiohttp`
-4. Start LM Studio (port 1234) and load a model.
-5. Start the server:
+   - `pip install fastapi uvicorn[standard] pandas openpyxl plotly requests aiofiles websockets python-multipart aiohttp numpy`
+4. Start the server:
    - `cd server` ; `uvicorn app:app --host 127.0.0.1 --port 8010`
-6. Open http://127.0.0.1:8010 in your browser.
+5. Open http://127.0.0.1:8010 in your browser.
 
 ### Verifying realtime streaming
-- Ask: "I want you to deeply analyze and compare the admission rate changes between 2024 and 2025 for Saudi patients".
+- Ask: "Plot current status counts (e.g., Inpatient/Outpatient/Emergency) as a bar chart."
 - Expect:
   - UI shows Analysis/Generated Code/Results sections immediately (~1–2s)
   - Text grows progressively per section
   - No full-response buffering
+  - Interactive Plotly chart appears
+
+The application uses Groq API with Kimi K2 model - no local LM Studio required!
 
 If LM Studio isn’t running, you’ll see a fallback message; streaming still works, but analysis quality will be limited.
 
@@ -96,6 +127,7 @@ If LM Studio isn’t running, you’ll see a fallback message; streaming still w
 - WebSocket must connect (no 403/upgrade errors). Check Console.
 - If text appears all at once, ensure you’re running this repo’s server (not a static file), and confirm `uvicorn app:app` is started from the `server` folder.
 - On proxies/CDNs: avoid them in local dev; they may buffer.
+- If you see "Groq API not available", check your internet connection.
 
 ## 🏗️ Architecture
 
@@ -171,7 +203,7 @@ Responses are displayed in the following optimized sequence:
 
 - **Backend**: FastAPI with async WebSocket support
 - **Frontend**: HTML5, Tailwind CSS, Material Icons
-- **LLM Integration**: LM Studio API with structured responses
+- **LLM Integration**: Groq API with Kimi K2 model (moonshotai/kimi-k2-instruct-0905)
 - **Data Processing**: Pandas, NumPy, Plotly
 - **Security**: Restricted execution environment
 - **Persistence**: JSON-based configuration storage
@@ -281,10 +313,11 @@ _(Displayed in large, bold text with gradient background)_
 
 ### Common Issues
 
-**LM Studio Connection Failed**:
-- Ensure LM Studio is running on port 1234
-- Check that a model is loaded and active
-- Verify firewall settings
+**Groq API Connection Failed**:
+- Check your internet connection
+- Verify the API key is correctly configured in `server/lm_studio_client.py`
+- Check Groq API service status at https://status.groq.com/
+- Review server logs for detailed error messages
 
 **File Upload Issues**:
 - Check file format (CSV/XLSX only)

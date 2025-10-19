@@ -2,6 +2,128 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.1] - 2025-10-19 - Enhanced Results Block Conditional Display
+
+### 🎨 UI/UX Improvements
+
+**ENHANCED**: Results Block now intelligently hides when visualizations are present to reduce interface clutter
+
+### ✨ Added
+
+- **Conditional Display Logic**: Results Block automatically hides when Plotly visualizations are generated
+  - Detects `plotly_figure` type in execution results
+  - Skips rendering Results Block container when charts are present
+  - Maintains display for non-visualization responses (counts, text results)
+
+- **Enhanced Logging**: Comprehensive console logging for debugging display logic
+  - Logs when visualizations are detected
+  - Logs when Results Block is shown/hidden
+  - Logs when visualizations are rendered
+  - Helps developers understand the display flow
+
+### 🔧 Changed
+
+- **`static/js/app.js`**:
+  - Improved `displayResultsBlock()` function with visualization detection
+  - Added skeleton loader hiding when visualization is present
+  - Enhanced console logging for better debugging
+  - Cleaned up debug console.log statements
+
+### 🎯 Benefits
+
+- **Reduced Clutter**: Visualizations convey results visually, eliminating redundant text display
+- **Better UX**: Cleaner interface when charts are displayed
+- **Maintained Functionality**: Results Block still appears for simple results (counts, summaries)
+- **Improved Display Order**: Analysis → Code → Visualization → Commentary (Results Block omitted when chart exists)
+
+### 📝 Technical Details
+
+**Display Logic Flow**:
+1. Code execution completes with results
+2. `displayVisualizations()` renders any Plotly charts
+3. `displayResultsBlock()` checks for `plotly_figure` keys
+4. If visualization found: Hide Results Block (including skeleton)
+5. If no visualization: Display Results Block with primary result
+
+**Detection Method**:
+```javascript
+// Check for plotly_figure in results
+Object.keys(results).forEach(key => {
+  if (key.includes('plotly_figure') && results[key].type === 'plotly_figure') {
+    hasVisualization = true;
+  }
+});
+```
+
+### ✅ Testing
+
+- ✅ Visualization query: "Plot current status counts as a bar chart" → Results Block hidden
+- ✅ Simple query: "How many patients are there?" → Results Block visible
+- ✅ Backend detection working correctly for both scenarios
+
+---
+
+## [2.4.0] - 2025-10-19 - Groq API Integration (Kimi K2)
+
+### 🚀 Major Changes
+
+**MIGRATED**: Replaced LM Studio integration with Groq API using Kimi K2 model (`moonshotai/kimi-k2-instruct-0905`)
+
+### ✨ Added
+
+- **Groq API Client**: Integrated Groq API for cloud-based LLM inference
+  - Base URL: `https://api.groq.com/openai`
+  - Model: `moonshotai/kimi-k2-instruct-0905` (Kimi K2)
+  - API Key authentication with Bearer token
+  - Enhanced timeout handling (10s for health checks, 120s for completions)
+  - Improved logging for API requests and responses
+
+### 🔧 Changed
+
+- **`server/lm_studio_client.py`**:
+  - Updated class to use Groq API instead of local LM Studio
+  - Added `api_key` parameter to constructor
+  - Enhanced health check with proper Groq API endpoint
+  - Updated all error messages to reference "Groq API" instead of "LM Studio"
+  - Added comprehensive logging for debugging
+
+- **`server/app.py`**:
+  - Updated comments and messages to reference Groq API
+  - Changed fallback messages from "LM Studio" to "Groq API"
+
+- **`Run.bat`**:
+  - Removed LM Studio health check (no longer needed)
+  - Updated startup message to indicate Groq API usage
+  - Simplified startup process
+
+- **`Setup.bat`**:
+  - Removed LM Studio installation instructions
+  - Updated next steps to reflect cloud-based API usage
+
+### 🎯 Benefits
+
+- **No Local Installation**: No need to download and run LM Studio locally
+- **Cloud-Based**: Leverages Groq's high-performance inference infrastructure
+- **Kimi K2 Model**: Access to advanced Moonshot AI model
+- **Simplified Setup**: Reduced setup complexity for new users
+- **Better Reliability**: Cloud-based service with professional SLA
+
+### 📝 Technical Details
+
+- API endpoint: `https://api.groq.com/openai/v1/chat/completions`
+- Authentication: Bearer token in Authorization header
+- Streaming: Full support for SSE-based streaming responses
+- Timeout configuration: 10s health check, 120s completion
+- Error handling: Comprehensive logging and fallback mechanisms
+
+### ⚠️ Breaking Changes
+
+- LM Studio is no longer required or supported
+- Local model inference is replaced with cloud API calls
+- API key must be configured in `server/lm_studio_client.py`
+
+---
+
 ## [2.3.2] - 2025-10-09 - Excel Conversion Layer
 
 ### Added

@@ -29,21 +29,8 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo Checking if LM Studio is running...
-curl -s http://127.0.0.1:1234/v1/models >nul 2>&1
-if %errorlevel% neq 0 (
-    echo WARNING: LM Studio does not appear to be running on port 1234
-    echo The application will still start but AI features may not work
-    echo.
-    echo To fix this:
-    echo 1. Start LM Studio
-    echo 2. Load a model
-    echo 3. Start the local server on port 1234
-    echo.
-    echo Press any key to continue anyway...
-    pause >nul
-    echo.
-)
+echo Using Groq API with Kimi K2 model...
+echo No local LM Studio required!
 
 echo Starting AI Sima Chatbot server...
 echo Server will be available at: http://localhost:8010

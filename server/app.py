@@ -468,13 +468,13 @@ async def ws_endpoint(ws: WebSocket) -> None:
 
             user_msg = str(payload.get("message", ""))
 
-            # Check if LM Studio is available
+            # Check if Groq API is available
             lm_available = await lm_client.check_health()
 
             await ws.send_json({"event": "start"})
 
             if lm_available:
-                # Use LM Studio for response generation with 3-layer architecture
+                # Use Groq API (Kimi K2) for response generation with 3-layer architecture
                 try:
                     field_content = {"initial_response": "", "generated_code": "", "result_commentary": ""}
                     # Track how many characters have been streamed per field to avoid re-sending
@@ -661,12 +661,12 @@ CRITICAL: The primary result must be interpreted in the context of the original 
 
                 except Exception as e:
                     # Log the full error for debugging
-                    logger.error(f"LM Studio processing error: {str(e)}", exc_info=True)
-                    # Fallback to stub response if LM Studio fails
-                    await _send_fallback_response(ws, user_msg, f"LM Studio error: {str(e)}")
+                    logger.error(f"Groq API processing error: {str(e)}", exc_info=True)
+                    # Fallback to stub response if Groq API fails
+                    await _send_fallback_response(ws, user_msg, f"Groq API error: {str(e)}")
             else:
-                # Fallback to stub response if LM Studio is not available
-                await _send_fallback_response(ws, user_msg, "LM Studio not available")
+                # Fallback to stub response if Groq API is not available
+                await _send_fallback_response(ws, user_msg, "Groq API not available")
 
     except WebSocketDisconnect:
         # Client disconnected; simply return
@@ -674,7 +674,7 @@ CRITICAL: The primary result must be interpreted in the context of the original 
 
 
 async def _send_fallback_response(ws: WebSocket, user_msg: str, error_msg: str = "") -> None:
-    """Send a fallback response when LM Studio is not available."""
+    """Send a fallback response when Groq API is not available."""
     async def stream_field(field: str, text: str, delay: float = 0.05) -> None:
         for i in range(0, len(text), 8):
             await ws.send_json({"event": "delta", "field": field, "delta": text[i:i+8]})

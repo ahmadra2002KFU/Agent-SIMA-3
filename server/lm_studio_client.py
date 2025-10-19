@@ -15,12 +15,14 @@ logger = logging.getLogger(__name__)
 
 
 class LMStudioClient:
-    """Client for communicating with LM Studio API."""
-    
-    def __init__(self, base_url: str = "https://api.groq.com/openai/", model: str = "moonshotai/kimi-k2-instruct-0905"):
+    """Client for communicating with Groq API (Kimi K2 model)."""
+
+    def __init__(self, base_url: str = "https://api.groq.com/openai", model: str = "moonshotai/kimi-k2-instruct-0905", api_key: str = "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"):
         self.base_url = base_url.rstrip("/")
         self.model = model
+        self.api_key = api_key
         self.session: Optional[aiohttp.ClientSession] = None
+        logger.info(f"Initialized Groq API client with base_url={self.base_url}, model={self.model}")
     
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create aiohttp session."""
@@ -34,13 +36,22 @@ class LMStudioClient:
             await self.session.close()
     
     async def check_health(self) -> bool:
-        """Check if LM Studio is running and accessible."""
+        """Check if Groq API is accessible."""
         try:
             session = await self._get_session()
-            async with session.get(f"{self.base_url}/v1/models", headers={"Authorization": "Bearer ADD_GROQ_API_KEY_HERE", "Content-Type": "application/json"}, timeout=5) as response:
-                return response.status == 200
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+            async with session.get(f"{self.base_url}/v1/models", headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                is_healthy = response.status == 200
+                if is_healthy:
+                    logger.info("Groq API health check passed")
+                else:
+                    logger.warning(f"Groq API health check failed with status {response.status}")
+                return is_healthy
         except Exception as e:
-            logger.warning(f"LM Studio health check failed: {e}")
+            logger.warning(f"Groq API health check failed: {e}")
             return False
     
     async def stream_completion(
@@ -74,15 +85,24 @@ class LMStudioClient:
                 **kwargs
             }
             
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+
+            logger.info(f"Sending request to Groq API: {self.base_url}/v1/chat/completions")
+
             async with session.post(
                 f"{self.base_url}/v1/chat/completions",
                 json=payload,
-                headers={"Authorization": "Bearer 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", "Content-Type": "application/json"}
+                headers=headers,
+                timeout=aiohttp.ClientTimeout(total=120)
             ) as response:
                 
                 if response.status != 200:
                     error_text = await response.text()
-                    raise Exception(f"LM Studio API error {response.status}: {error_text}")
+                    logger.error(f"Groq API error {response.status}: {error_text}")
+                    raise Exception(f"Groq API error {response.status}: {error_text}")
                 
                 async for line in response.content:
                     line = line.decode('utf-8').strip()
@@ -107,7 +127,7 @@ class LMStudioClient:
                         continue
                         
         except Exception as e:
-            logger.error(f"Error streaming from LM Studio: {e}")
+            logger.error(f"Error streaming from Groq API: {e}")
             # Yield error message as fallback
             yield f"Error: {str(e)}"
     
@@ -360,7 +380,7 @@ Respond ONLY with valid JSON in the exact format specified."""
 
         # If nothing was produced at all
         if not full_response.strip() and all(len(v) == 0 for v in partial_buffers.values()):
-            yield {"field": "initial_response", "content": "No response received from LM Studio"}
+            yield {"field": "initial_response", "content": "No response received from Groq API"}
             yield {"field": "generated_code", "content": ""}
             yield {"field": "result_commentary", "content": "Unable to process request"}
 

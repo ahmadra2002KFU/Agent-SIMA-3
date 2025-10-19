@@ -1254,20 +1254,28 @@
           // Extract primary result from execution results
           let primaryResult = null;
           let primaryResultKey = null;
-          
-            // Check if there are any visualizations (plots)
+
+          // Check if there are any visualizations (plots)
           let hasVisualization = false;
           Object.keys(results).forEach(key => {
-            console.log("===== key: 1", key)
             if (key.includes('plotly_figure') && results[key].type === 'plotly_figure') {
               hasVisualization = true;
+              console.log('📊 Visualization detected:', key, '- Results Block will be hidden');
             }
           });
-        
-          // If there's a visualization, hide the Results Block entirely
+
+          // If there's a visualization, hide the Results Block entirely (including skeleton)
           if (hasVisualization) {
-            const resultsBlock = containers.results_block;  // ← Note: resultsBlock (plural)
+            const resultsBlock = containers.results_block;
+            const skeleton = resultsBlock.querySelector('#results-skeleton');
+            const actualResults = resultsBlock.querySelector('#results-actual');
+
+            // Hide all components of Results Block
+            skeleton.classList.add('hidden');
+            actualResults.classList.add('hidden');
             resultsBlock.classList.add('hidden');
+
+            console.log('✓ Results Block hidden due to visualization presence');
             return; // Exit early, don't show results
           }
  
@@ -1312,10 +1320,14 @@
             // Show the actual results container (skeleton is already hidden by handleFinalResponse)
             actualResults.classList.remove('hidden');
             resultsBlock.classList.remove('hidden');
+
+            console.log('✓ Results Block displayed with primary result:', primaryResultKey, '=', displayValue);
           } else {
             // No primary result found, hide the entire Results Block
             const resultsBlock = containers.results_block;
             resultsBlock.classList.add('hidden');
+
+            console.log('⚠️ Results Block hidden - no primary result found');
           }
         }
 
@@ -1367,8 +1379,9 @@
                   modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
                   displaylogo: false
                 });
+                console.log('✓ Plotly visualization rendered:', key);
               } catch (error) {
-                console.error('Error rendering Plotly figure:', error);
+                console.error('❌ Error rendering Plotly figure:', error);
                 plotDiv.innerHTML = '<p class="text-red-500">Error rendering visualization</p>';
               }
             }
@@ -1377,6 +1390,9 @@
           // Show visualizations container if we have any
           if (hasViz) {
             containers.visualizations.classList.remove('hidden');
+            console.log('✓ Visualizations container displayed');
+          } else {
+            console.log('ℹ️ No visualizations to display');
           }
         }
 

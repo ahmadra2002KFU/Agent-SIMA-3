@@ -96,10 +96,9 @@ echo Setup completed successfully!
 echo ========================================
 echo.
 echo Next steps:
-echo 1. Download and install LM Studio from https://lmstudio.ai/
-echo 2. Load a compatible model in LM Studio
-echo 3. Start LM Studio server on port 1234
-echo 4. Run 'Run.bat' to start the application
+echo 1. Run 'Run.bat' to start the application
+echo 2. The application uses Groq API with Kimi K2 model
+echo 3. No local LM Studio installation required!
 echo.
 echo Press any key to exit...
 pause >nul
