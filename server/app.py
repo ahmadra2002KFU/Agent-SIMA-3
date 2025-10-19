@@ -141,6 +141,7 @@ CRITICAL RULES FOR CODE GENERATION:
 - For visualizations, assign the figure to 'fig' or 'figure'
 - Always use plotly instead of matplotlib
 - Never use matplotlib under any circumstance
+- These are the libraries you have access to: pandas (as pd), numpy (as np), plotly.express (as px), plotly.graph_objects (as go), plotly.figure_factory (as ff), plotly.subplots (make_subplots), json, base64 Don't use any other libraries.
 
 RESPONSE STRUCTURE - Generate in this order:
 1. **Generate Python code FIRST** - Write the code to solve the user's query
@@ -511,7 +512,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
                                     for i in range(0, len(delta), 8):
                                         chunk = delta[i:i+8]
                                         await ws.send_json({"event": "delta", "field": field, "delta": chunk})
-                                        await asyncio.sleep(0.02)
+                                        # await asyncio.sleep(0.02)
                                     last_sent_len[field] = len(content)
 
                     # Step 2: Execute generated code if any
@@ -621,7 +622,7 @@ CRITICAL: The primary result must be interpreted in the context of the original 
                                     for i in range(0, len(delta), 8):
                                         chunk = delta[i:i+8]
                                         await ws.send_json({"event": "delta", "field": "result_commentary", "delta": chunk})
-                                        await asyncio.sleep(0.02)
+                                        # await asyncio.sleep(0.02)
                                     last_sent_len["result_commentary"] = len(content)
                     else:
                         # No code execution, use the original commentary
@@ -632,7 +633,7 @@ CRITICAL: The primary result must be interpreted in the context of the original 
                             for i in range(0, len(delta), 8):
                                 chunk = delta[i:i+8]
                                 await ws.send_json({"event": "delta", "field": "result_commentary", "delta": chunk})
-                                await asyncio.sleep(0.02)
+                                # await asyncio.sleep(0.02)
                             last_sent_len["result_commentary"] = len(commentary)
 
                     # Before sending final object, ensure any corrected content from final JSON parsing
@@ -645,7 +646,7 @@ CRITICAL: The primary result must be interpreted in the context of the original 
                             for i in range(0, len(delta), 8):
                                 chunk = delta[i:i+8]
                                 await ws.send_json({"event": "delta", "field": field, "delta": chunk})
-                                await asyncio.sleep(0.02)
+                                # await asyncio.sleep(0.02)
                             last_sent_len[field] = len(current_content)
                         elif current_content and len(current_content) == last_sent_len[field]:
                             # Force a replacement delta to ensure corrected escape sequences are sent
@@ -677,7 +678,7 @@ async def _send_fallback_response(ws: WebSocket, user_msg: str, error_msg: str =
     async def stream_field(field: str, text: str, delay: float = 0.05) -> None:
         for i in range(0, len(text), 8):
             await ws.send_json({"event": "delta", "field": field, "delta": text[i:i+8]})
-            await asyncio.sleep(delay)
+            # await asyncio.sleep(delay)
 
     initial = f"I received your message: '{user_msg}'. {error_msg}"
     code = (

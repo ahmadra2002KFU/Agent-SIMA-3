@@ -6,7 +6,7 @@ import asyncio
 from typing import AsyncGenerator, Dict, Any, Optional
 import aiohttp
 import logging
-
+import re
 # Temporarily comment out new architecture imports for testing
 # from server.validation_engine import validation_engine
 # from server.error_handler import error_handler
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class LMStudioClient:
     """Client for communicating with LM Studio API."""
     
-    def __init__(self, base_url: str = "http://127.0.0.1:1234", model: str = "local-model"):
+    def __init__(self, base_url: str = "https://api.groq.com/openai/", model: str = "moonshotai/kimi-k2-instruct-0905"):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.session: Optional[aiohttp.ClientSession] = None
@@ -37,7 +37,7 @@ class LMStudioClient:
         """Check if LM Studio is running and accessible."""
         try:
             session = await self._get_session()
-            async with session.get(f"{self.base_url}/v1/models", timeout=5) as response:
+            async with session.get(f"{self.base_url}/v1/models", headers={"Authorization": "Bearer ADD_GROQ_API_KEY_HERE", "Content-Type": "application/json"}, timeout=5) as response:
                 return response.status == 200
         except Exception as e:
             logger.warning(f"LM Studio health check failed: {e}")
@@ -77,7 +77,7 @@ class LMStudioClient:
             async with session.post(
                 f"{self.base_url}/v1/chat/completions",
                 json=payload,
-                headers={"Content-Type": "application/json"}
+                headers={"Authorization": "Bearer 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", "Content-Type": "application/json"}
             ) as response:
                 
                 if response.status != 200:
@@ -330,7 +330,7 @@ Respond ONLY with valid JSON in the exact format specified."""
         async for chunk in self.stream_completion(messages, temperature=temperature):
             full_response += chunk
 
-            # Try to incrementally extract and stream each field's partial content
+            # Try to incrementally extract and stream each field's partial content as the stream progresses
             for fld in ["initial_response", "generated_code", "result_commentary"]:
                 try:
                     partial = extract_partial(full_response, fld)
@@ -347,17 +347,16 @@ Respond ONLY with valid JSON in the exact format specified."""
                     # Best-effort; ignore parser errors and continue accumulating
                     continue
 
-            # If the model appears to have finished a full JSON object, parse once to finalize
-            try:
-                if full_response.strip().endswith("}"):
-                    parsed = json.loads(full_response.strip())
-                    for field in ["initial_response", "generated_code", "result_commentary"]:
-                        if field in parsed:
-                            # Ensure final content is yielded at least once
-                            yield {"field": field, "content": parsed[field]}
-                    break
-            except json.JSONDecodeError:
-                pass
+        # Once streaming is complete, attempt a final JSON extraction
+        try:
+            full_response = full_response.replace("```json", "").replace("```", "").strip()
+            parsed = json.loads(full_response.strip())
+            for field in ["initial_response", "generated_code", "result_commentary"]:
+                if field in parsed:
+                    # Ensure final content is yielded at least once
+                    yield {"field": field, "content": parsed[field]}
+        except json.JSONDecodeError:
+            pass
 
         # If nothing was produced at all
         if not full_response.strip() and all(len(v) == 0 for v in partial_buffers.values()):

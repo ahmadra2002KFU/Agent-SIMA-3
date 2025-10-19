@@ -164,7 +164,7 @@ class StreamingController:
                     state.total_sent += len(chunk)
                     self.streaming_stats['bytes_streamed'] += len(chunk.encode('utf-8'))
                     
-                    await asyncio.sleep(delay)
+                    # await asyncio.sleep(delay)
                 
                 # Update position
                 state.field_positions[field_name] = len(content)
@@ -331,7 +331,7 @@ class StreamingController:
                 if not success:
                     return False
                 
-                await asyncio.sleep(0.1)  # Brief delay between fields
+                # await asyncio.sleep(0.1)  # Brief delay between fields
             
             # Send completion
             await self._send_safe(websocket, {

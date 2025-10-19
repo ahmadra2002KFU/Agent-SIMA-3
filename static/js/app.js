@@ -1254,6 +1254,24 @@
           // Extract primary result from execution results
           let primaryResult = null;
           let primaryResultKey = null;
+          
+            // Check if there are any visualizations (plots)
+          let hasVisualization = false;
+          Object.keys(results).forEach(key => {
+            console.log("===== key: 1", key)
+            if (key.includes('plotly_figure') && results[key].type === 'plotly_figure') {
+              hasVisualization = true;
+            }
+          });
+        
+          // If there's a visualization, hide the Results Block entirely
+          if (hasVisualization) {
+            const resultsBlock = containers.results_block;  // ← Note: resultsBlock (plural)
+            resultsBlock.classList.add('hidden');
+            return; // Exit early, don't show results
+          }
+ 
+
 
           // Look for the main result variable in priority order
           const priorityKeys = ['result', 'output', 'summary', 'analysis', 'answer'];
