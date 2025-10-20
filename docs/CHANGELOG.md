@@ -2,6 +2,223 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.5.1] - 2025-10-20 - Comprehensive Code Cleanup
+
+### 🧹 Cleanup & Maintenance
+
+**CLEANED**: Removed obsolete files, duplicate documentation, debug logs, and temporary files to improve maintainability
+
+### 🗑️ Removed
+
+**Obsolete Python Files** (2 files):
+- `code_sandbox.py` - Temporary sandbox file for testing
+- `server/app_v2.py` - Old version of application (384 lines)
+
+**Duplicate/Outdated Documentation** (8 files, ~1,700 lines):
+- `ANALYSIS_FIRST_SUMMARY.md` - Historical implementation summary (now in CHANGELOG)
+- `BACKEND_FIX_SUMMARY.md` - Historical fix summary (now in CHANGELOG)
+- `IMPLEMENTATION_SUMMARY.md` - Historical implementation summary (now in CHANGELOG)
+- `SKELETON_LOADER_IMPLEMENTATION.md` - Duplicate of docs/SKELETON_LOADER.md
+- `docs/FINDINGS_SUMMARY.md` - Duplicate of DUPLICATE_PLOTS_ROOT_CAUSE_ANALYSIS.md
+- `docs/FIX_SUMMARY.md` - Quick summary (now in CHANGELOG)
+- `docs/FIX_DOCUMENTATION.md` - Historical fix documentation
+- `docs/SKELETON_LOADER_DEMO.md` - Demo documentation
+
+**Python Cache Files**:
+- `server/__pycache__/` - All .pyc files (~15 files)
+- `testing stuff/__pycache__/` - All .pyc files
+
+**Temporary Upload Files** (~50 files):
+- All UUID-named CSV/XLSX files from `server/uploads/`
+- All UUID-named CSV/XLSX files from `uploads/`
+
+**Debug Console Logs** (8 instances in `static/js/app.js`):
+- Removed debug `console.log()` statements used during feature development
+- Kept error logs (`console.error()`) for production debugging
+
+### 🔧 Changed
+
+**`.gitignore`** - Enhanced with comprehensive Python and IDE exclusions:
+- Added `__pycache__/`, `*.pyc`, `*.pyo`, `*.pyd`
+- Added virtual environment directories (`.venv/`, `venv/`, `ENV/`)
+- Added IDE directories (`.vscode/`, `.idea/`)
+- Added OS files (`.DS_Store`, `Thumbs.db`)
+- Improved upload directory exclusions
+
+### 📊 Cleanup Summary
+
+**Total Files Removed**: ~65 files
+- 2 Python files
+- 8 documentation files
+- ~55 cache and temporary files
+
+**Total Lines Removed**: ~2,200+ lines
+- Documentation: ~1,700 lines
+- Python code: ~450 lines
+- Debug logs: ~8 lines
+
+**Disk Space Saved**: ~5-10 MB
+
+### ✅ Benefits
+
+- **Improved Maintainability**: Removed duplicate and outdated documentation
+- **Cleaner Repository**: Removed temporary and generated files
+- **Better Version Control**: Enhanced .gitignore prevents future cache commits
+- **Production-Ready Code**: Removed debug logs while keeping error handling
+- **Reduced Confusion**: Single source of truth for documentation (CHANGELOG.md)
+
+### 🔍 Files Kept (Important)
+
+**Essential Documentation**:
+- ✅ `README.md`, `AGENTS.md`, `CLAUDE.md`
+- ✅ `docs/CHANGELOG.md` (version history)
+- ✅ `docs/ARCHITECTURE_SUMMARY.md`
+- ✅ `docs/DUPLICATE_PLOTS_ROOT_CAUSE_ANALYSIS.md`
+- ✅ `docs/EXECUTION_FLOW_DIAGRAM.md`
+- ✅ `docs/MIGRATION_GUIDE.md`
+- ✅ `docs/NEW_OUTPUT_ORDER.md`
+- ✅ `docs/RESULTS_BLOCK_CONDITIONAL_DISPLAY.md`
+- ✅ `docs/SKELETON_LOADER.md`
+
+**Essential Test Files**:
+- ✅ All test files in `testing stuff/` (part of test suite)
+- ✅ Test data files (comprehensive_test_data.csv, sample_data.csv, etc.)
+
+**Essential Data Files**:
+- ✅ `hospital_patients.csv` (sample dataset)
+- ✅ `uploads/hospital_data.csv`, `uploads/test_data.csv`
+
+---
+
+## [2.5.0] - 2025-10-19 - OpenAI SDK Integration for Streaming
+
+### 🚀 Major Refactoring
+
+**MIGRATED**: Replaced custom WebSocket streaming with OpenAI SDK's native streaming API
+
+### ✨ Added
+
+- **OpenAI SDK Integration**: Installed and integrated official OpenAI Python SDK (`openai` package)
+  - Leverages OpenAI's battle-tested streaming implementation
+  - Uses `AsyncOpenAI` client for async/await compatibility
+  - Implements `stream=True` parameter in chat completions
+  - Handles streaming chunks using OpenAI's delta format
+
+### 🔧 Changed
+
+- **`server/lm_studio_client.py`**:
+  - Replaced custom `aiohttp` HTTP streaming with OpenAI SDK
+  - Removed manual SSE (Server-Sent Events) parsing
+  - Simplified `stream_completion()` method from 80 lines to 44 lines
+  - Uses `client.chat.completions.create(stream=True)` for streaming
+  - Cleaner error handling with OpenAI's exception types
+  - Removed `_get_session()` method (no longer needed)
+
+- **Health Check**:
+  - Updated to use `client.models.list()` instead of manual HTTP request
+  - More reliable API connectivity verification
+
+### 🎯 Benefits
+
+- **More Reliable**: OpenAI SDK handles reconnection, retries, and error recovery automatically
+- **Cleaner Code**: Reduced custom streaming logic by ~50%
+- **Better Performance**: OpenAI SDK is optimized for streaming performance
+- **Consistent API**: Follows OpenAI API standards (Groq is OpenAI-compatible)
+- **Easier Maintenance**: Less custom code to maintain and debug
+- **Future-Proof**: Easy to switch between OpenAI-compatible providers
+
+### 📝 Technical Details
+
+**Before (Custom HTTP Streaming)**:
+```python
+async with session.post(url, json=payload, headers=headers) as response:
+    async for line in response.content:
+        line = line.decode('utf-8').strip()
+        if line.startswith("data: "):
+            line = line[6:]
+        if line == "[DONE]":
+            break
+        chunk = json.loads(line)
+        if "choices" in chunk:
+            delta = chunk["choices"][0].get("delta", {})
+            if "content" in delta:
+                yield delta["content"]
+```
+
+**After (OpenAI SDK Streaming)**:
+```python
+stream = await self.client.chat.completions.create(
+    model=self.model,
+    messages=messages,
+    temperature=temperature,
+    max_tokens=max_tokens,
+    stream=True
+)
+
+async for chunk in stream:
+    if chunk.choices and len(chunk.choices) > 0:
+        delta = chunk.choices[0].delta
+        if delta.content:
+            yield delta.content
+```
+
+### ✅ Compatibility
+
+- ✅ Frontend WebSocket connection unchanged
+- ✅ 3-layer processing system still works
+- ✅ Response format preserved (Analysis, Code, Results, Commentary)
+- ✅ All validation and serialization logic intact
+- ✅ Conditional Results Block display logic maintained
+
+### 📦 Dependencies
+
+- **Added**: `openai==2.5.0` (official OpenAI Python SDK)
+- **Removed**: Direct `aiohttp` usage in `lm_studio_client.py` (still used elsewhere)
+
+### ✅ Testing Results
+
+**Test Environment**:
+- Server: FastAPI with OpenAI SDK integration
+- LLM Provider: Groq API with Kimi K2 model
+- Dataset: hospital_patients.csv (600 rows, 16 columns)
+
+**Test 1: Visualization Query** ✅
+- **Query**: "Create a bar chart showing patient count by current status"
+- **Expected**: Plotly chart displayed, Results Block hidden
+- **Result**: ✅ PASSED
+  - Plotly bar chart rendered successfully with 10 status categories
+  - Results Block correctly hidden
+  - Console logs: "📊 Visualization detected: plotly_figure_fig - Results Block will be hidden"
+  - Console logs: "✓ Results Block hidden due to visualization presence"
+
+**Test 2: Simple Query** ✅
+- **Query**: "How many patients are there in total?"
+- **Expected**: Results Block displayed with numeric value
+- **Result**: ✅ PASSED
+  - Results Block displayed with value "600"
+  - No visualization generated
+  - Console logs: "ℹ️ No visualizations to display"
+  - Console logs: "✓ Results Block displayed with primary result: result = 600"
+
+**Test 3: Streaming Performance** ✅
+- **Expected**: Smooth, responsive streaming with no errors
+- **Result**: ✅ PASSED
+  - OpenAI SDK streaming worked flawlessly
+  - No errors in server logs or browser console
+  - WebSocket connections stable
+  - Code execution successful (2 queries, 2 successful executions)
+
+**Test 4: Conditional Display Logic** ✅
+- **Expected**: Results Block conditional display maintained from v2.4.1
+- **Result**: ✅ PASSED
+  - Visualization query: Results Block hidden ✅
+  - Simple query: Results Block visible ✅
+  - Console logging working correctly ✅
+
+**Overall**: 🎉 **ALL TESTS PASSED** - OpenAI SDK integration successful with full backward compatibility
+
+---
+
 ## [2.4.1] - 2025-10-19 - Enhanced Results Block Conditional Display
 
 ### 🎨 UI/UX Improvements

@@ -1,2 +1,27 @@
-*/__pycache__/*
+# Python cache files
+__pycache__/
+*/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+
+# Upload directories
 server/uploads/*
+uploads/*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

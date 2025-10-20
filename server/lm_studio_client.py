@@ -1,55 +1,44 @@
 """
-LM Studio API client for streaming responses.
+Groq API client using OpenAI SDK for streaming responses.
 """
 import json
 import asyncio
 from typing import AsyncGenerator, Dict, Any, Optional
-import aiohttp
 import logging
-import re
-# Temporarily comment out new architecture imports for testing
-# from server.validation_engine import validation_engine
-# from server.error_handler import error_handler
+from openai import AsyncOpenAI
 
 logger = logging.getLogger(__name__)
 
 
 class LMStudioClient:
-    """Client for communicating with Groq API (Kimi K2 model)."""
+    """Client for communicating with Groq API (Kimi K2 model) using OpenAI SDK."""
 
-    def __init__(self, base_url: str = "https://api.groq.com/openai", model: str = "moonshotai/kimi-k2-instruct-0905", api_key: str = "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"):
+    def __init__(self, base_url: str = "https://api.groq.com/openai/v1", model: str = "moonshotai/kimi-k2-instruct-0905", api_key: str = "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"):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.api_key = api_key
-        self.session: Optional[aiohttp.ClientSession] = None
-        logger.info(f"Initialized Groq API client with base_url={self.base_url}, model={self.model}")
-    
-    async def _get_session(self) -> aiohttp.ClientSession:
-        """Get or create aiohttp session."""
-        if self.session is None or self.session.closed:
-            self.session = aiohttp.ClientSession()
-        return self.session
-    
+        # Initialize OpenAI client with Groq API endpoint
+        self.client = AsyncOpenAI(
+            base_url=self.base_url,
+            api_key=self.api_key
+        )
+        logger.info(f"Initialized Groq API client (OpenAI SDK) with base_url={self.base_url}, model={self.model}")
+
     async def close(self):
-        """Close the aiohttp session."""
-        if self.session and not self.session.closed:
-            await self.session.close()
+        """Close the OpenAI client."""
+        await self.client.close()
     
     async def check_health(self) -> bool:
         """Check if Groq API is accessible."""
         try:
-            session = await self._get_session()
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
-            }
-            async with session.get(f"{self.base_url}/v1/models", headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as response:
-                is_healthy = response.status == 200
-                if is_healthy:
-                    logger.info("Groq API health check passed")
-                else:
-                    logger.warning(f"Groq API health check failed with status {response.status}")
-                return is_healthy
+            # Try to list models to verify API connectivity
+            models = await self.client.models.list()
+            is_healthy = models is not None
+            if is_healthy:
+                logger.info("Groq API health check passed")
+            else:
+                logger.warning("Groq API health check failed - no models returned")
+            return is_healthy
         except Exception as e:
             logger.warning(f"Groq API health check failed: {e}")
             return False
@@ -62,72 +51,40 @@ class LMStudioClient:
         **kwargs
     ) -> AsyncGenerator[str, None]:
         """
-        Stream completion from LM Studio.
-        
+        Stream completion from Groq API using OpenAI SDK.
+
         Args:
             messages: List of message dicts with 'role' and 'content'
             temperature: Sampling temperature
             max_tokens: Maximum tokens to generate
             **kwargs: Additional parameters
-            
+
         Yields:
             str: Token chunks from the model
         """
         try:
-            session = await self._get_session()
-            
-            payload = {
-                "model": self.model,
-                "messages": messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-                "stream": True,
+            logger.info(f"Sending streaming request to Groq API with model={self.model}")
+
+            # Use OpenAI SDK's streaming
+            stream = await self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True,
                 **kwargs
-            }
-            
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
-            }
+            )
 
-            logger.info(f"Sending request to Groq API: {self.base_url}/v1/chat/completions")
+            # Iterate over the stream chunks
+            async for chunk in stream:
+                # Extract content from delta
+                if chunk.choices and len(chunk.choices) > 0:
+                    delta = chunk.choices[0].delta
+                    if delta.content:
+                        yield delta.content
 
-            async with session.post(
-                f"{self.base_url}/v1/chat/completions",
-                json=payload,
-                headers=headers,
-                timeout=aiohttp.ClientTimeout(total=120)
-            ) as response:
-                
-                if response.status != 200:
-                    error_text = await response.text()
-                    logger.error(f"Groq API error {response.status}: {error_text}")
-                    raise Exception(f"Groq API error {response.status}: {error_text}")
-                
-                async for line in response.content:
-                    line = line.decode('utf-8').strip()
-                    
-                    if not line:
-                        continue
-                    
-                    if line.startswith("data: "):
-                        line = line[6:]  # Remove "data: " prefix
-                    
-                    if line == "[DONE]":
-                        break
-                    
-                    try:
-                        chunk = json.loads(line)
-                        if "choices" in chunk and len(chunk["choices"]) > 0:
-                            delta = chunk["choices"][0].get("delta", {})
-                            if "content" in delta:
-                                yield delta["content"]
-                    except json.JSONDecodeError:
-                        # Skip malformed JSON lines
-                        continue
-                        
         except Exception as e:
-            logger.error(f"Error streaming from Groq API: {e}")
+            logger.error(f"Error streaming from Groq API: {e}", exc_info=True)
             # Yield error message as fallback
             yield f"Error: {str(e)}"
     
