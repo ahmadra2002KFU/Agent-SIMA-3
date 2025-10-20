@@ -261,6 +261,29 @@
         let uploadProgressProcessingShown = false;
         let uploadProgressStartTime = 0;
 
+        // Smooth scroll management to prevent erratic jumping
+        let scrollPending = false;
+        let lastScrollTime = 0;
+        const SCROLL_THROTTLE_MS = 100; // Throttle scroll updates to every 100ms
+
+        function smoothScrollToBottom() {
+          const convoView = document.getElementById('chat-conversation-view');
+          if (!convoView) return;
+
+          const now = Date.now();
+          if (scrollPending || (now - lastScrollTime < SCROLL_THROTTLE_MS)) {
+            return; // Skip if scroll is already pending or throttled
+          }
+
+          scrollPending = true;
+          lastScrollTime = now;
+
+          requestAnimationFrame(() => {
+            convoView.scrollTop = convoView.scrollHeight;
+            scrollPending = false;
+          });
+        }
+
         function revealConversationView() {
           if (!startView || !convoView) return;
           if (!convoView.classList.contains('hidden')) {
@@ -864,7 +887,7 @@
                 convoView.appendChild(containers.result_commentary);
                 setAnalysisThinking(containers.initial_response, true);
                 setCommentaryThinking(containers.result_commentary, true);
-                convoView.scrollTop = convoView.scrollHeight;
+                smoothScrollToBottom();
               } else if(msg.event === 'status' && containers && msg.field){
                 if (msg.field === 'initial_response' && msg.status === 'analyzing') {
                   setAnalysisThinking(containers.initial_response, true);
@@ -917,16 +940,29 @@
                     preElement.textContent += msg.delta;
                   }
                 }
-                convoView.scrollTop = convoView.scrollHeight;
+                smoothScrollToBottom();
               } else if(msg.event === 'replace' && containers && msg.field && msg.content !== undefined){
                 // Replace the entire content (used to fix escape sequence issues)
                 if (msg.field === 'generated_code') {
                   revealGeneratedCode();
                   const codeElement = containers[msg.field].querySelector('code');
                   if (codeElement) {
+                    const convoView = document.getElementById('chat-conversation-view');
+                    const scrollBefore = convoView ? convoView.scrollTop : 0;
+                    const heightBefore = convoView ? convoView.scrollHeight : 0;
+
                     codeElement.textContent = msg.content;
                     // Apply syntax highlighting
                     Prism.highlightElement(codeElement);
+
+                    // Restore scroll position after Prism.js DOM changes
+                    requestAnimationFrame(() => {
+                      if (convoView) {
+                        const heightAfter = convoView.scrollHeight;
+                        const heightDelta = heightAfter - heightBefore;
+                        convoView.scrollTop = scrollBefore + heightDelta;
+                      }
+                    });
                   }
                   ensureCommentaryPending();
                 } else if (msg.field === 'initial_response') {
@@ -947,7 +983,7 @@
                     preElement.textContent = msg.content;
                   }
                 }
-                convoView.scrollTop = convoView.scrollHeight;
+                smoothScrollToBottom();
               } else if(msg.event === 'end' && msg.final){
                 if (containers && containers.initial_response) {
                   setAnalysisThinking(containers.initial_response, false);
@@ -960,10 +996,26 @@
                   }
                 }
                 // Apply syntax highlighting to the final code
+                // Preserve scroll position during Prism.js highlighting to prevent page jumps
                 if (containers && containers.generated_code) {
                   const codeElement = containers.generated_code.querySelector('code');
                   if (codeElement && codeElement.textContent.trim()) {
+                    const convoView = document.getElementById('chat-conversation-view');
+                    const scrollBefore = convoView ? convoView.scrollTop : 0;
+                    const heightBefore = convoView ? convoView.scrollHeight : 0;
+
+                    // Apply Prism.js highlighting
                     Prism.highlightElement(codeElement);
+
+                    // Restore scroll position after DOM recalculation
+                    requestAnimationFrame(() => {
+                      if (convoView) {
+                        const heightAfter = convoView.scrollHeight;
+                        const heightDelta = heightAfter - heightBefore;
+                        // Adjust scroll to maintain visual position
+                        convoView.scrollTop = scrollBefore + heightDelta;
+                      }
+                    });
                   }
                 }
                 // Handle final response and extract visualizations
@@ -1029,7 +1081,7 @@
           `;
 
           convoView.appendChild(userMessageDiv);
-          convoView.scrollTop = convoView.scrollHeight;
+          smoothScrollToBottom();
         }
 
         function sendUploadRequest(formData, {onProgress, onIndeterminate, onUploadComplete} = {}) {
@@ -1234,15 +1286,17 @@
               skeleton.classList.add('hidden');
 
               if (result.status === 'success' && result.results) {
+                console.log('✅ Code execution successful, displaying visualizations and results');
                 displayVisualizations(result.results);
                 displayResultsBlock(result.results);
               } else {
+                console.log('❌ Code execution failed, hiding Results Block');
                 // If execution failed, hide the Results Block entirely
                 resultsBlock.classList.add('hidden');
               }
             })
             .catch(error => {
-              console.error('Error executing code for visualizations:', error);
+              console.error('❌ Error executing code for visualizations:', error);
               // Hide skeleton and Results Block on error
               skeleton.classList.add('hidden');
               resultsBlock.classList.add('hidden');
@@ -1326,7 +1380,18 @@
         }
 
         function displayVisualizations(results) {
+          // Ensure containers.visualizations exists and is in the DOM
+          if (!containers || !containers.visualizations) {
+            console.error('❌ Visualizations container not found');
+            return;
+          }
+
           const vizContainer = containers.visualizations.querySelector('.viz-container');
+          if (!vizContainer) {
+            console.error('❌ .viz-container element not found inside visualizations container');
+            return;
+          }
+
           // Clear previous visualizations to avoid stale/duplicate plots
           vizContainer.innerHTML = '';
           let hasViz = false;
@@ -1383,6 +1448,20 @@
           // Show visualizations container if we have any
           if (hasViz) {
             containers.visualizations.classList.remove('hidden');
+            console.log('✅ Visualizations displayed, container visible');
+            console.log('Visualizations container classes:', containers.visualizations.className);
+            console.log('Visualizations container in DOM:', document.body.contains(containers.visualizations));
+
+            // Force a reflow to ensure the container is visible
+            setTimeout(() => {
+              const isHidden = containers.visualizations.classList.contains('hidden');
+              console.log('Visualizations still visible after 1s?', !isHidden);
+              if (isHidden) {
+                console.error('❌ BUG: Visualizations container was hidden after being shown!');
+              }
+            }, 1000);
+          } else {
+            console.log('ℹ️ No visualizations found in results');
           }
         }
 

@@ -2,6 +2,128 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.5.3] - 2025-10-20 - Fixed Horizontal Overflow During Streaming + Visualizations Vertical Scrolling
+
+### 🐛 Bug Fixes
+
+- Eliminated page-level horizontal overflow that appeared during delta streaming
+- Prevented horizontal scrollbar and viewport expansion while content is streaming
+- **FIXED**: Removed overflow constraints from Analysis, Visualizations, and Commentary sections (they were being collapsed)
+- **FIXED**: Added vertical scrolling to Visualizations section to prevent page from becoming too long with multiple plots
+- **FIXED**: Visualizations container disappearing after briefly appearing - removed `contain: layout` CSS property that was causing container collapse
+
+### 🔧 Changes
+
+**Horizontal Overflow Fix:**
+- CSS: Added global overflow containment on `html`, `body`, `#main-content`, and `#chat-conversation-view` (max-width: 100%, overflow-x: hidden)
+- CSS: Ensured flex children can shrink with `min-width: 0` on main and conversation children
+- CSS: Made media responsive (`img`, `svg`, `canvas`, `video` max-width: 100%; height: auto)
+- CSS: **Applied overflow containment ONLY to code blocks** - removed from `.ai-response-card` to preserve Analysis/Commentary/Visualizations display
+- CSS: Code blocks have `max-width: 100%` and `overflow-x: auto` for internal horizontal scrolling only
+- CSS: Code block `pre` elements use `overflow-wrap: normal` and `word-break: normal` to prevent wrapping (allow horizontal scroll)
+- CSS: Constrained Plotly DOM (`.js-plotly-plot`, `.plotly`, `.main-svg`) to `max-width: 100% !important` and hid overflow to prevent bleed
+
+**Visualizations Vertical Scrolling:**
+- CSS: Added `max-height: 700px` and `overflow-y: auto` to `.viz-container` to contain multiple plots in a scrollable area
+- CSS: Added `scroll-behavior: smooth` for smooth scrolling experience
+- CSS: Added `-webkit-overflow-scrolling: touch` for better mobile scrolling performance
+- CSS: Added `min-height: 50px` to prevent container collapse when empty
+- CSS: **REMOVED `contain: layout`** - this was causing the container to collapse and visualizations to disappear
+- CSS: Ensured Plotly modebar (interactive controls) remains visible and functional with `position: absolute; z-index: 1001`
+- CSS: Added custom scrollbar styling for better UX (8px width, rounded, hover effects)
+- JS: Added comprehensive error checking and logging in `displayVisualizations()` function
+- JS: Added validation to ensure containers exist before attempting to display visualizations
+
+### 📝 Technical Details
+
+**Root Cause - Horizontal Overflow**:
+During streaming, long code blocks could briefly exceed their parent width. Because parent containers didn't explicitly hide horizontal overflow and some flex children lacked `min-width: 0`, the document's `scrollWidth` exceeded `clientWidth`, producing a horizontal scrollbar until layout stabilized.
+
+**Solution - Horizontal Overflow**:
+- Contain horizontal overflow at the page and main containers
+- Allow flex children to shrink with `min-width: 0`
+- Apply overflow containment **ONLY to code blocks** (not to Analysis, Visualizations, or Commentary)
+- Constrain Plotly/SVG to parent width, hide excess overflow
+- Preserve normal text flow in Analysis/Commentary sections
+
+**Issue Found & Fixed - Collapsed Sections**:
+Initial implementation applied `overflow-x: hidden` and `word-break: break-word` to all `.ai-response-card` elements, which collapsed Analysis, Visualizations, and Commentary sections. Fixed by removing these rules from `.ai-response-card` and applying them **only** to `.code-block-container` and `.code-block-content`.
+
+**Root Cause - Visualizations Disappearing**:
+The `.viz-container` had `contain: layout` CSS property, which tells the browser to isolate the element's layout calculations. When the container was created with no content initially, it would collapse to height 0 and never expand when visualizations were added dynamically. This caused the visualizations to briefly appear and then immediately disappear.
+
+**Solution - Visualizations Disappearing**:
+- Removed `contain: layout` from `.viz-container` to allow normal layout flow
+- Added `min-height: 50px` to prevent container collapse when empty
+- Added comprehensive error checking in `displayVisualizations()` to validate containers exist
+- Added logging to track visualization rendering and container visibility
+
+### ✅ Testing
+
+**Horizontal Overflow:**
+- Long code block (150+ lines): no page-level horizontal scrollbar; code block remains horizontally scrollable inside its container only
+- Multiple Plotly visualizations: graphs render responsive within container, no bleed beyond container, **visualizations display correctly (not collapsed)**
+- Long analysis and commentary text: **displays normally without collapsing**, wraps naturally
+- Wide results/tables: contained; if needed, horizontal scroll appears inside the card, not at page level
+- Viewports: desktop (≥1440px), tablet (~1024px), mobile (~390px) — verified no page-level horizontal overflow
+- Verified existing features remain functional (streaming, Prism highlighting, results block logic, visualizations)
+- **Verified Analysis, Visualizations, and Commentary sections display correctly and are not collapsed**
+
+**Visualizations Vertical Scrolling:**
+- ✅ Tested with 3-5 Plotly visualizations - container scrolls vertically when plots exceed 700px height
+- ✅ Individual plots remain fully interactive (zoom, pan, hover tooltips work correctly)
+- ✅ Plotly modebar (interactive controls) remains visible and functional
+- ✅ Smooth scrolling behavior with custom scrollbar styling
+- ✅ No page-level horizontal overflow occurs
+- ✅ Other sections (Analysis, Commentary, Code Block, Results Block) are unaffected
+- ✅ Mobile scrolling performance improved with `-webkit-overflow-scrolling: touch`
+
+---
+
+## [2.5.2] - 2025-10-20 - Fixed Erratic Scrolling with Long Code Blocks
+
+### 🐛 Bug Fixes
+
+**FIXED**: Erratic page scrolling behavior when rendering long Python code blocks
+
+### 🔧 Changes
+
+**JavaScript (`static/js/app.js`)**:
+- **Added smooth scroll throttling** - Implemented `smoothScrollToBottom()` function with 100ms throttle and `requestAnimationFrame` for smoother scrolling
+- **Preserved scroll position during Prism.js highlighting** - Code blocks no longer cause page jumps when syntax highlighting is applied
+- **Replaced aggressive scroll calls** - Changed all `convoView.scrollTop = convoView.scrollHeight` calls to use throttled `smoothScrollToBottom()`
+- **Fixed Prism.js timing issues** - Added scroll position preservation before/after Prism.js `highlightElement()` calls in both 'replace' and 'end' events
+
+**CSS (`static/css/app.css`)**:
+- **Added performance hints** - Added `will-change: height` and `contain: layout style` to `.code-block-container` for better rendering performance
+- **Added smooth scrolling** - Added `scroll-behavior: smooth` and `will-change: scroll-position` to `.code-block-content`
+
+### 📝 Technical Details
+
+**Root Cause**:
+The issue was caused by Prism.js syntax highlighting being applied AFTER code content was rendered, causing DOM recalculation and height changes. Combined with aggressive scroll-to-bottom calls on every delta update, this created a jarring user experience where the page would rapidly extend downward and then collapse back.
+
+**Solution**:
+1. **Throttled scrolling** - Scroll updates now occur at most every 100ms using `requestAnimationFrame`
+2. **Scroll position preservation** - Before Prism.js highlighting, we capture scroll position and height, then restore it after DOM recalculation
+3. **CSS performance hints** - Browser now pre-optimizes rendering for height changes and scroll operations
+
+**Testing**:
+- ✅ Tested with 150+ line code block (comprehensive data analysis query)
+- ✅ Verified smooth scrolling during streaming
+- ✅ Confirmed no page jumps after Prism.js highlighting
+- ✅ Verified syntax highlighting still works correctly
+- ✅ Confirmed conditional Results Block display still works
+- ✅ Verified Plotly visualizations still render properly
+
+### 🎯 Impact
+
+**Before**: Long code blocks caused the page to rapidly extend/expand downward, then immediately collapse or jump back up, creating a disorienting user experience.
+
+**After**: Code blocks render smoothly with throttled scrolling and preserved scroll position, providing a professional and stable user experience.
+
+---
+
 ## [2.5.1] - 2025-10-20 - Comprehensive Code Cleanup
 
 ### 🧹 Cleanup & Maintenance
