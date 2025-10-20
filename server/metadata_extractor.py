@@ -12,28 +12,27 @@ logger = logging.getLogger(__name__)
 class MetadataExtractor:
     """Extract comprehensive metadata from pandas DataFrames."""
     
-    def __init__(self):
-        pass
-    
-    def extract_metadata(self, df: pd.DataFrame, filename: str = "") -> Dict[str, Any]:
+    def __init__(self, uploaded_file: object):
+        try:
+            self.df = pd.read_csv(uploaded_file)
+            self.filename = uploaded_file.name
+        except Exception as e:
+            logger.error("error reading file into pandas.")
+ 
+    def extract_metadata(self, filename: str = "") -> Dict[str, Any]:
         """
         Extract comprehensive metadata from a DataFrame.
-        
-        Args:
-            df: pandas DataFrame to analyze
-            filename: Original filename for reference
-            
         Returns:
             Dictionary containing comprehensive metadata
         """
         try:
             metadata = {
-                "basic_info": self._get_basic_info(df, filename),
-                "columns": self._get_column_metadata(df),
-                "numeric_summary": self._get_numeric_summary(df),
-                "categorical_summary": self._get_categorical_summary(df),
-                "data_quality": self._get_data_quality_indicators(df),
-                "sample_data": self._get_sample_data(df)
+                "basic_info": self.get_basic_info(),
+                "columns": self._get_column_metadata(),
+                "numeric_summary": self._get_numeric_summary(),
+                "categorical_summary": self._get_categorical_summary(),
+                "data_quality": self._get_data_quality_indicators(),
+                "sample_data": self._get_sample_data()
             }
             
             return metadata
@@ -41,35 +40,31 @@ class MetadataExtractor:
         except Exception as e:
             logger.error(f"Error extracting metadata: {e}")
             return {"error": str(e)}
-    
-    def _get_basic_info(self, df: pd.DataFrame, filename: str) -> Dict[str, Any]:
+
+    def get_basic_info(self) -> Dict[str, Any]:
         """Get basic information about the dataset."""
         return {
-            "filename": filename,
-            "shape": {
-                "rows": len(df),
-                "columns": len(df.columns)
-            },
-            "memory_usage_mb": round(df.memory_usage(deep=True).sum() / (1024 * 1024), 2),
-            "column_names": list(df.columns),
-            "dtypes": {col: str(dtype) for col, dtype in df.dtypes.items()}
+            "filename": self.filename,
+            "rows": len(self.df),
+            "columns": len(self.df.columns),
+            "memory_usage_mb": round(self.df.memory_usage(deep=True).sum() / (1024 * 1024), 2),
         }
     
-    def _get_column_metadata(self, df: pd.DataFrame) -> Dict[str, Dict[str, Any]]:
+    def _get_column_metadata(self) -> Dict[str, Dict[str, Any]]:
         """Get detailed metadata for each column."""
         column_metadata = {}
         
-        for col in df.columns:
-            col_data = df[col]
+        for col in self.df.columns:
+            col_data = self.df[col]
             
             # Basic column info
             col_info = {
                 "dtype": str(col_data.dtype),
                 "non_null_count": int(col_data.count()),
                 "null_count": int(col_data.isnull().sum()),
-                "null_percentage": round((col_data.isnull().sum() / len(df)) * 100, 2),
+                "null_percentage": round((col_data.isnull().sum() / len(self.df)) * 100, 2),
                 "unique_count": int(col_data.nunique()),
-                "unique_percentage": round((col_data.nunique() / len(df)) * 100, 2)
+                "unique_percentage": round((col_data.nunique() / len(self.df)) * 100, 2)
             }
             
             # Type-specific analysis
@@ -158,9 +153,9 @@ class MetadataExtractor:
         except:
             return 0
     
-    def _get_numeric_summary(self, df: pd.DataFrame) -> Dict[str, Any]:
+    def _get_numeric_summary(self) -> Dict[str, Any]:
         """Get summary statistics for all numeric columns."""
-        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        numeric_cols = self.df.select_dtypes(include=[np.number]).columns
         
         if len(numeric_cols) == 0:
             return {"message": "No numeric columns found"}
@@ -168,7 +163,7 @@ class MetadataExtractor:
         summary = {}
         for col in numeric_cols:
             try:
-                stats = df[col].describe()
+                stats = self.df[col].describe()
                 summary[col] = {
                     "count": int(stats['count']),
                     "mean": float(stats['mean']),
@@ -184,9 +179,9 @@ class MetadataExtractor:
         
         return summary
     
-    def _get_categorical_summary(self, df: pd.DataFrame) -> Dict[str, Any]:
+    def _get_categorical_summary(self) -> Dict[str, Any]:
         """Get summary for categorical columns."""
-        categorical_cols = df.select_dtypes(include=['object', 'category']).columns
+        categorical_cols = self.df.select_dtypes(include=['object', 'category']).columns
         
         if len(categorical_cols) == 0:
             return {"message": "No categorical columns found"}
@@ -194,9 +189,9 @@ class MetadataExtractor:
         summary = {}
         for col in categorical_cols:
             try:
-                value_counts = df[col].value_counts().head(10)
+                value_counts = self.df[col].value_counts().head(10)
                 summary[col] = {
-                    "unique_count": int(df[col].nunique()),
+                    "unique_count": int(self.df[col].nunique()),
                     "most_frequent": str(value_counts.index[0]) if len(value_counts) > 0 else None,
                     "most_frequent_count": int(value_counts.iloc[0]) if len(value_counts) > 0 else 0,
                     "top_values": [{"value": str(val), "count": int(count)} 
@@ -207,19 +202,19 @@ class MetadataExtractor:
         
         return summary
     
-    def _get_data_quality_indicators(self, df: pd.DataFrame) -> Dict[str, Any]:
+    def _get_data_quality_indicators(self) -> Dict[str, Any]:
         """Get data quality indicators."""
         try:
-            total_cells = df.shape[0] * df.shape[1]
-            missing_cells = df.isnull().sum().sum()
+            total_cells = self.df.shape[0] * self.df.shape[1]
+            missing_cells = self.df.isnull().sum().sum()
             
             # Duplicate rows
-            duplicate_rows = df.duplicated().sum()
+            duplicate_rows = self.df.duplicated().sum()
             
             # Columns with high missing data
             high_missing_cols = []
-            for col in df.columns:
-                missing_pct = (df[col].isnull().sum() / len(df)) * 100
+            for col in self.df.columns:
+                missing_pct = (self.df[col].isnull().sum() / len(self.df)) * 100
                 if missing_pct > 50:
                     high_missing_cols.append({"column": col, "missing_percentage": round(missing_pct, 2)})
             
@@ -238,24 +233,20 @@ class MetadataExtractor:
                 "missing_percentage": round((missing_cells / total_cells) * 100, 2),
                 "duplicate_rows": int(duplicate_rows),
                 "high_missing_columns": high_missing_cols,
-                "data_quality_score": max(0, 100 - (missing_cells / total_cells) * 100 - (duplicate_rows / len(df)) * 10),
+                "data_quality_score": max(0, 100 - (missing_cells / total_cells) * 100 - (duplicate_rows / len(self.df)) * 10),
                 "potential_issues": issues
             }
         except Exception as e:
             logger.error(f"Error calculating data quality indicators: {e}")
             return {"error": str(e)}
     
-    def _get_sample_data(self, df: pd.DataFrame, n_rows: int = 5) -> Dict[str, Any]:
+    def _get_sample_data(self, n_rows: int = 5) -> Dict[str, Any]:
         """Get sample data from the dataset."""
         try:
             return {
-                "head": df.head(n_rows).to_dict('records'),
-                "tail": df.tail(n_rows).to_dict('records')
+                "head": self.df.head(n_rows).to_dict('records'),
+                "tail": self.df.tail(n_rows).to_dict('records')
             }
         except Exception as e:
             logger.error(f"Error getting sample data: {e}")
             return {"error": str(e)}
-
-
-# Global metadata extractor instance
-metadata_extractor = MetadataExtractor()
