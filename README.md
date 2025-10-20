@@ -243,7 +243,7 @@ python test_frontend_integration.py # Frontend integration
 
 ```
 Agent-SIMA-3/
-├── aisimalogo.png          # Official AI Sima logo file
+├── aisimalogo.png          # Official Gen-SIMA logo file
 ├── index.html              # Main frontend interface
 ├── server/                 # Backend FastAPI application
 │   ├── app.py             # Main application server

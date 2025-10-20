@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.5.4] - 2025-10-20 - Rebranding: AI SIMA → Gen-SIMA
+
+### 🎨 Branding Updates
+
+- **Application Title**: Changed from "AI Sima" to "Gen-SIMA" across all interfaces
+- **HTML Title**: Updated page title in `index.html` to "Gen-SIMA - Chat with your data"
+- **Sidebar Branding**: Updated sidebar header to display "Gen-SIMA"
+- **Welcome Screen**: Updated main logo alt text to "Gen-SIMA Logo"
+- **Server Logs**: Updated startup/shutdown messages to reference "Gen-SIMA Chatbot server"
+- **Batch Scripts**: Updated `Run.bat` to display "Gen-SIMA Chatbot server"
+- **Documentation**: Updated README.md and CHANGELOG.md references
+- **Test Files**: Updated test assertions to check for "Gen-SIMA" instead of "AI Sima"
+
+### 📝 Files Modified
+
+- `index.html` - Page title, sidebar header, welcome screen logo
+- `server/app.py` - Server startup/shutdown log messages
+- `Run.bat` - Server startup message
+- `README.md` - Logo file description
+- `docs/CHANGELOG.md` - Branding references
+- `testing stuff/test_comprehensive_suite.py` - HTML title test assertion
+- `testing stuff/test_frontend_integration.py` - Frontend HTML test assertion
+
+### 🔧 Technical Notes
+
+- Logo file (`aisimalogo.png`) remains unchanged - only text references updated
+- No functional changes - purely cosmetic rebranding
+- All existing features and functionality remain intact
+
+---
+
 ## [2.5.3] - 2025-10-20 - Fixed Horizontal Overflow During Streaming + Visualizations Vertical Scrolling
 
 ### 🐛 Bug Fixes
@@ -741,7 +772,7 @@ The system now displays responses in the following optimized order:
 - **Local Logo Integration**: Replaced external Google-hosted logo URLs with local aisimalogo.png file
 - **Static File Serving**: Added FastAPI static file mount to serve logo and other assets
 - **Consistent Branding**: Unified logo display across sidebar and main welcome area
-- **Professional Appearance**: Enhanced visual identity with official AI Sima branding
+- **Professional Appearance**: Enhanced visual identity with official Gen-SIMA branding
 
 ### 🔧 Technical Implementation
 

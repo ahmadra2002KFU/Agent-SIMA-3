@@ -45,7 +45,7 @@ class ComprehensiveTestSuite:
             # Test if HTML contains expected elements
             if response.status_code == 200:
                 html_content = response.text
-                self.log_test("HTML contains AI Sima title", "AI Sima" in html_content)
+                self.log_test("HTML contains Gen-SIMA title", "Gen-SIMA" in html_content)
                 self.log_test("HTML contains file upload", 'type="file"' in html_content)
                 self.log_test("HTML contains WebSocket code", "WebSocket" in html_content)
             

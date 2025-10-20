@@ -199,7 +199,7 @@ result = {
     try:
         # Test if the main page loads
         response = requests.get(f"{base_url}/")
-        if response.status_code == 200 and "AI Sima" in response.text:
+        if response.status_code == 200 and "Gen-SIMA" in response.text:
             print("✅ Frontend HTML loads correctly")
             
             # Check for key elements

@@ -103,7 +103,7 @@ def _format_execution_summary(execution_results: Dict[str, Any]) -> str:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    logger.info("AI Sima Chatbot server starting up...")
+    logger.info("Gen-SIMA Chatbot server starting up...")
 
     # Auto-load hospital_patients.csv if it exists
     hospital_file_path = UPLOADS_DIR / "hospital_patients.csv"
@@ -118,7 +118,7 @@ async def lifespan(app: FastAPI):
 
     yield
     # Shutdown
-    logger.info("AI Sima Chatbot server shutting down...")
+    logger.info("Gen-SIMA Chatbot server shutting down...")
     await lm_client.close()
     file_handler.clear_current_file()
 
