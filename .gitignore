@@ -10,7 +10,7 @@ __pycache__/
 .venv/
 venv/
 ENV/
-
+.agent
 # Upload directories
 server/uploads/*
 uploads/*
@@ -25,3 +25,4 @@ uploads/*
 # OS
 .DS_Store
 Thumbs.db
+
