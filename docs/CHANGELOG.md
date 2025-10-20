@@ -2,12 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.5.4] - 2025-10-20 - Rebranding: AI SIMA → Gen-SIMA
+## [2.5.4] - 2025-10-20 - Rebranding: AI SIMA → Gen-SIMA + Color Theme Update
 
 ### 🎨 Branding Updates
 
 - **Application Title**: Changed from "AI Sima" to "Gen-SIMA" across all interfaces
 - **HTML Title**: Updated page title in `index.html` to "Gen-SIMA - Chat with your data"
+- **Favicon**: Added favicon using the Gen-SIMA logo (`/static/aisimalogo.png`)
 - **Sidebar Branding**: Updated sidebar header to display "Gen-SIMA"
 - **Welcome Screen**: Updated main logo alt text to "Gen-SIMA Logo"
 - **Server Logs**: Updated startup/shutdown messages to reference "Gen-SIMA Chatbot server"
@@ -15,9 +16,36 @@ All notable changes to this project will be documented in this file.
 - **Documentation**: Updated README.md and CHANGELOG.md references
 - **Test Files**: Updated test assertions to check for "Gen-SIMA" instead of "AI Sima"
 
+### 🎨 Color Theme Update
+
+- **Primary Color**: Changed from deep blue (`#0D47A1`) to deep teal (`#104043`) to match the logo
+- **Primary Dark**: Added darker teal (`#0A2C2E`) for hover states and emphasis
+- **Accent Gold**: Added gold accent (`#FFD700`) for visual interest
+- **Accent Red**: Updated red (`#C41E3A`) to match the crescent in the logo
+- **Background Light**: Updated to cleaner light gray (`#F5F5F5`)
+- **Background Dark**: Updated to deeper black (`#0A0A0A`)
+- **Surface Dark**: Updated to slightly lighter dark (`#1A1A1A`)
+- **Text Colors**: Adjusted for better contrast with new color scheme
+- **Send Button**: Updated all send button styles (normal, hover, active, dark mode, pulse animation) to use teal gradient (`#104043` to `#1a6066`)
+- **All UI Elements**: Comprehensively updated all remaining blue colors to teal:
+  - Code block language labels and copy buttons
+  - Syntax highlighting tokens
+  - Skeleton loader borders
+  - Loading animations (analysis and commentary thinking dots)
+  - Attach button hover states
+  - User message bubbles
+  - Section titles
+  - Welcome screen dropzone states
+  - Notification toasts (info variant)
+  - New Chat button hover state
+  - Sidebar toggle hover state
+  - Welcome screen Examples and Capabilities icons
+  - Processing status indicator
+
 ### 📝 Files Modified
 
-- `index.html` - Page title, sidebar header, welcome screen logo
+- `index.html` - Page title, sidebar header, welcome screen logo, favicon, Tailwind color theme
+- `static/css/app.css` - Send button styles (gradient, shadows, hover, active, dark mode, pulse animation)
 - `server/app.py` - Server startup/shutdown log messages
 - `Run.bat` - Server startup message
 - `README.md` - Logo file description
@@ -27,9 +55,11 @@ All notable changes to this project will be documented in this file.
 
 ### 🔧 Technical Notes
 
-- Logo file (`aisimalogo.png`) remains unchanged - only text references updated
-- No functional changes - purely cosmetic rebranding
+- Logo file (`aisimalogo.png`) remains unchanged - only text references and colors updated
+- Color theme now uses deep teal (`#104043`) as primary color to match the Gen-SIMA logo
+- No functional changes - purely cosmetic rebranding and visual updates
 - All existing features and functionality remain intact
+- Improved visual consistency between logo and UI elements
 
 ---
 
