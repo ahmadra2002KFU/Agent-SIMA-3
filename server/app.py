@@ -10,7 +10,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, H
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from lm_studio_client import lm_client
+from llm_client import LLMClient
 from file_handler import file_handler
 from code_executor import code_executor
 from rules_manager import rules_manager
@@ -28,6 +28,8 @@ ANALYSIS_SECTION_LIMIT = 2000
 CODE_SECTION_LIMIT = 6000
 OUTPUT_SECTION_LIMIT = 2000
 RESULT_SECTION_LIMIT = 2000
+
+llm_client = LLMClient()
 
 def _truncate_for_context(value: Any, limit: int) -> str:
     if value is None:

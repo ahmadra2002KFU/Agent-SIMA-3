@@ -8,7 +8,7 @@ from typing import Dict, Any, Optional
 from pathlib import Path
 import logging
 
-from metadata_extractor import metadata_extractor
+from metadata_extractor import MetadataExtractor
 from xlsx_converter import convert_excel_to_csv
 
 logger = logging.getLogger(__name__)
