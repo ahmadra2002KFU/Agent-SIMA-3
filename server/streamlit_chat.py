@@ -7,13 +7,7 @@ import pandas as pd
 from llm_client import LLMClient
 from openai import OpenAI
 
-client = LLMClient()
-# client = OpenAI(
-#     api_key="empty",
-#     base_url="http://localhost:8000/v1"
-# )
-# # print(client.models.list().data)
-# model_id = client.models.list().data[0].id
+llm_client = LLMClient()
 
 st.title("Analytics Assistant")
 
@@ -27,13 +21,25 @@ if "user_rules" not in st.session_state:
     st.session_state["user_rules"] = []
     
 if "file_data" in st.session_state:
-    if "metadata_extractor" not in st.session_state:
-        st.session_state['metadata'] = MetadataExtractor(filepath=st.session_state['uploaded_file']['upload_url'], filename=st.session_state['uploaded_file']['name'])
+    if "metadata" not in st.session_state:
+        st.session_state['metadata'] = MetadataExtractor(st.session_state['uploaded_file']).extract_metadata()
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        if isinstance(msg["content"], pd.DataFrame):
-            st.dataframe(msg["content"])
+        if msg["role"] == "assistant" and isinstance(msg["content"], list):
+            for m in msg["content"]:
+                if "field" in m and m["field"] == "initial_response":
+                    with st.expander("Question Analysis"):
+                        st.markdown(m["content"])
+                elif "field" in m and m["field"] == "generated_code":
+                    if m["content"].strip():
+                        with st.expander("Generated Code"):
+                            st.code(m["content"])
+                        with st.expander("Code Results"):
+                            exec(m["content"])
+                elif "field" in m and m["field"] == "result_commentary":
+                    with st.expander("Results", expanded=True):
+                        st.markdown(m["content"])
         else:
             st.markdown(msg["content"])
 
@@ -45,16 +51,17 @@ user_input = st.chat_input(
 
 if "metadata" in st.session_state:
     with st.sidebar:
-        info = st.session_state['metadata'].get_basic_info()
-        st.markdown("### 📊 File Info")
-        st.markdown(
-            f"""
-            **Filename:** `{info.get('filename', 'N/A')}`  
-            **Rows:** {info.get('rows', 'N/A'):,}  
-            **Columns:** {info.get('columns', 'N/A'):,}  
-            **Memory Usage:** {info.get('memory_usage_mb', 'N/A')} MB  
-            """
-        )
+        if "basic_info" in st.session_state:
+            info = st.session_state['basic_info']
+            st.markdown("### 📊 File Info")
+            st.markdown(
+                f"""
+                **Filename:** `{info.get('filename', 'N/A')}`  
+                **Rows:** {info.get('rows', 'N/A'):,}  
+                **Columns:** {info.get('columns', 'N/A'):,}  
+                **Memory Usage:** {info.get('memory_usage_mb', 'N/A')} MB  
+                """
+            )
 
 def add_rule(new_rule):
     if new_rule.strip() not in st.session_state["user_rules"]:
@@ -96,18 +103,28 @@ if user_input:
         st.session_state['uploaded_file'] = user_input.files[0]
         st.info(f"📁 File '{user_input.files[0].name}' received! I'll be able to analyze and answer questions about your data.")
         st.session_state['uploaded_file'] = user_input.files[0]
-        st.session_state['metadata'] = MetadataExtractor(st.session_state['uploaded_file'])
+        metadata_extractor = MetadataExtractor(st.session_state['uploaded_file'])
+        st.session_state['metadata'] = metadata_extractor.extract_metadata()
+        st.session_state['basic_info'] = metadata_extractor.get_basic_info()
 
     if user_input.text:
         st.session_state.messages.append({"role": "user", "content": user_input.text})
         st.chat_message("user").write(user_input.text)
-        stream = client.chat.completions.create(
-            model=model_id,
-            messages=st.session_state.messages,
-            stream=True
-        )
+        SYSTEM_PROMPT="""You are an expert data analyst. Interpret code execution results by answering the user's ORIGINAL QUERY first, using the primary result in the correct context.
+
+CRITICAL COMMENTARY STRUCTURE:
+1. **ANSWER THE ORIGINAL QUERY**: Use the primary result to directly answer what the user asked
+2. **METHODOLOGY EXPLANATION**: Explain how the code achieved this result
+3. **TECHNICAL DETAILS**: Reference specific functions, operations, or techniques used
+4. **CONTEXTUAL INSIGHTS**: Provide relevant additional insights
+
+EXAMPLE for "What is the average age of American patients?":
+"The average age of American patients is 54.8 years. The code calculated this by filtering for patients with 'American' nationality and using a custom age calculation function that computed age at admission by comparing Date_of_Birth with Admission_Date, accounting for whether the birthday had occurred yet in the admission year."
+
+CRITICAL: The primary result must be interpreted in the context of the original user query. If the user asks for "average age", the result represents age in years, not a percentage or count."""
+
         with st.chat_message("assistant"):
-            client.generate_structured_response(
+            stream = llm_client.generate_structured_response(
                 user_message=user_input.text,
                 system_prompt=SYSTEM_PROMPT,
                 file_metadata=st.session_state['metadata'],
@@ -117,7 +134,8 @@ if user_input:
                 result_commentary_temp=0.2
             )
             msg = st.write_stream(stream)
-            st.session_state.messages.append({"role": "assistant", "content": msg})
+            print("content: ", msg[-3:])
+            st.session_state.messages.append({"role": "assistant", "content": msg[-3:]})
 
 
 
