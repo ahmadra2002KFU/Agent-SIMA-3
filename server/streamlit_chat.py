@@ -1,4 +1,4 @@
-import streamlit as st
+
 import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__)))
@@ -6,11 +6,12 @@ from metadata_extractor import MetadataExtractor
 import pandas as pd
 from llm_client import LLMClient
 from openai import OpenAI
+from chat_helper import display_assistant_message, display_user_message, add_rule
+import streamlit as st
 
 llm_client = LLMClient()
 
 st.title("Analytics Assistant")
-
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -25,23 +26,7 @@ if "file_data" in st.session_state:
         st.session_state['metadata'] = MetadataExtractor(st.session_state['uploaded_file']).extract_metadata()
 
 for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        if msg["role"] == "assistant" and isinstance(msg["content"], list):
-            for m in msg["content"]:
-                if "field" in m and m["field"] == "initial_response":
-                    with st.expander("Question Analysis"):
-                        st.markdown(m["content"])
-                elif "field" in m and m["field"] == "generated_code":
-                    if m["content"].strip():
-                        with st.expander("Generated Code"):
-                            st.code(m["content"])
-                        with st.expander("Code Results"):
-                            exec(m["content"])
-                elif "field" in m and m["field"] == "result_commentary":
-                    with st.expander("Results", expanded=True):
-                        st.markdown(m["content"])
-        else:
-            st.markdown(msg["content"])
+    display_assistant_message(msg) if msg["role"] == "assistant" else display_user_message(msg)
 
 user_input = st.chat_input(
     "Say something and/or attach a data sheet (csv, excel file)",
@@ -62,11 +47,6 @@ if "metadata" in st.session_state:
                 **Memory Usage:** {info.get('memory_usage_mb', 'N/A')} MB  
                 """
             )
-
-def add_rule(new_rule):
-    if new_rule.strip() not in st.session_state["user_rules"]:
-        st.session_state["user_rules"].append(new_rule.strip())
-        st.session_state["rule_input_box"] = ""
 
 with st.sidebar:
     st.markdown("### User LLM Rules (Optional)")
@@ -91,9 +71,7 @@ with st.sidebar:
                 with cols[1]:
                     if st.button("Delete", key=f"delete_rule_{idx}"):
                         to_delete = idx
-                        # print(to_delete)
             if to_delete is not None:
-                print("Deleting rule: ", to_delete)
                 st.session_state["user_rules"].pop(to_delete)
                 st.rerun()
 
@@ -133,9 +111,11 @@ CRITICAL: The primary result must be interpreted in the context of the original 
                 generated_code_temp=0.3,
                 result_commentary_temp=0.2
             )
-            msg = st.write_stream(stream)
-            print("content: ", msg[-3:])
-            st.session_state.messages.append({"role": "assistant", "content": msg[-3:]})
+            response = []   
+            for msg in st.write_stream(stream):
+                response.append(msg)
+                display_assistant_message(msg)
+            st.session_state.messages.append({"role": "assistant", "content": response})
 
 
 
