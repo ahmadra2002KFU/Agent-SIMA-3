@@ -1,4 +1,6 @@
 @echo off
+setlocal enableextensions
+
 echo ========================================
 echo AI Sima Chatbot - Run Script
 echo ========================================
@@ -6,7 +8,7 @@ echo.
 
 REM Check if we're in the correct directory
 if not exist "server\app.py" (
-    echo ERROR: Please run this script from the Agent3 project root directory
+    echo ERROR: Please run this script from the project root directory
     echo The script should be in the same folder as the 'server' directory
     pause
     exit /b 1
@@ -45,7 +47,7 @@ if "%1"=="--no-open" (
     start "" "http://localhost:8010"
 )
 cd server
-uvicorn app:app --host 127.0.0.1 --port 8010
+python -m uvicorn app:app --host 127.0.0.1 --port 8010
 
 REM If we get here, the server stopped
 echo.

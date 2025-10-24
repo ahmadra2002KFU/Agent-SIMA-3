@@ -204,6 +204,11 @@ No recent chats
 </button>
 <!-- Textarea -->
 <textarea class="premium-textarea flex-1 py-2.5 px-1 max-h-32 overflow-y-auto" id="chat-input" placeholder="Ask a question or upload a file..." rows="1"></textarea>
+        <!-- Voice Input Button -->
+        <button id="mic-btn" class="premium-attach-btn p-2.5 flex-shrink-0 z-20" aria-pressed="false" aria-label="Start voice input" title="Voice input (Alt+R)">
+          <span class="material-symbols-outlined text-xl premium-icon">mic</span>
+        </button>
+
 <!-- Send Button -->
 <button id="send-btn" class="premium-send-btn text-white w-12 h-12 flex-shrink-0 flex items-center justify-center z-20">
 <span class="material-symbols-outlined text-xl">send</span>
@@ -214,7 +219,7 @@ No recent chats
 </div>
 </main>
 </div>
-    
+
 
     <script defer src="/static/js/app.js"></script>
     <div id="notification-container" class="notification-container" aria-live="polite" aria-atomic="true"></div>

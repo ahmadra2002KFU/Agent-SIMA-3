@@ -1330,7 +1330,7 @@
 
             return; // Exit early, don't show results
           }
- 
+
 
 
           // Look for the main result variable in priority order
@@ -1523,6 +1523,8 @@
           .catch(() => {
             // No existing file - silent fail
           });
+  window.showNotification = showNotification;
+
       })();
 
         // Load existing rules on page load
@@ -1659,6 +1661,197 @@
         window.addRule = addRule;
         window.showNotification = showNotification;
 
+        // Voice Input Integration (Mic + Groq Whisper)
+        (function(){
+          const micBtn = document.getElementById('mic-btn');
+          if (!micBtn) return;
+          const inputEl = document.getElementById('chat-input');
+          // Basic capability check
+          if (!(window.MediaRecorder) || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            micBtn.addEventListener('click', (e)=>{ e.preventDefault(); try{ window.showNotification('Voice input is not supported in this browser', { type: 'warn', title: 'Voice input' }); } catch(_){} });
+            micBtn.title = 'Voice input not supported in this browser';
+            micBtn.setAttribute('aria-disabled', 'true');
+            return;
+          }
 
+          const inputContainer = document.getElementById('input-container');
 
+          let mediaRecorder = null;
+          let audioChunks = [];
+          let isRecording = false;
+          let recStart = 0;
+          let recTimer = null;
 
+          function fmt(ms){
+            const s = Math.floor(ms/1000);
+            const m = Math.floor(s/60);
+            const r = s % 60;
+            return `${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`;
+          }
+
+          function setMicState(state, opts = {}){
+            micBtn.disabled = state === 'processing';
+            micBtn.dataset.state = state;
+            const icon = micBtn.querySelector('.material-symbols-outlined');
+            if (state === 'recording') {
+              icon.textContent = 'stop_circle';
+              micBtn.setAttribute('aria-pressed', 'true');
+              micBtn.classList.add('ring-2','ring-red-500','animate-pulse');
+            } else if (state === 'processing') {
+              icon.textContent = 'hourglass_top';
+              micBtn.setAttribute('aria-pressed', 'false');
+              micBtn.classList.remove('ring-2','ring-red-500','animate-pulse');
+            } else if (state === 'error') {
+              icon.textContent = 'error';
+              micBtn.setAttribute('aria-pressed', 'false');
+              micBtn.classList.remove('ring-2','ring-red-500','animate-pulse');
+            } else {
+              icon.textContent = 'mic';
+              micBtn.setAttribute('aria-pressed', 'false');
+              micBtn.classList.remove('ring-2','ring-red-500','animate-pulse');
+            }
+
+            // timer label inside button
+            let timerEl = micBtn.querySelector('[data-role="mic-timer"]');
+            if (!timerEl) {
+              timerEl = document.createElement('span');
+              timerEl.dataset.role = 'mic-timer';
+              timerEl.className = 'ml-2 text-xs font-mono hidden';
+              micBtn.appendChild(timerEl);
+            }
+            if (state === 'recording') {
+              timerEl.classList.remove('hidden');
+              timerEl.style.color = '#C41E3A';
+            } else {
+              timerEl.classList.add('hidden');
+            }
+
+            if (state === 'error' && opts.message) {
+              try { window.showNotification(opts.message, { type: 'error', title: 'Voice input' }); } catch(_) {}
+            }
+          }
+
+          function startTimer(){
+            const timerEl = micBtn.querySelector('[data-role="mic-timer"]');
+            if (!timerEl) return;
+            if (recTimer) clearInterval(recTimer);
+            recTimer = setInterval(()=>{
+              const t = Date.now() - recStart;
+              timerEl.textContent = fmt(t);
+            }, 200);
+          }
+          function stopTimer(){ if (recTimer) { clearInterval(recTimer); recTimer = null; } }
+
+          async function beginRecording(){
+            try {
+              setMicState('processing');
+              const permPromise = navigator.mediaDevices.getUserMedia({ audio: true });
+              let permTimeout = setTimeout(()=>{
+                setMicState('error', { message: 'Microphone permission timed out. Please allow mic access.' });
+              }, 10000);
+              const stream = await permPromise;
+              clearTimeout(permTimeout);
+              audioChunks = [];
+              const mimeType = 'audio/webm';
+              mediaRecorder = new MediaRecorder(stream, { mimeType });
+              mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) audioChunks.push(e.data); };
+              mediaRecorder.onstop = async () => {
+                stopTimer();
+                setMicState('processing');
+                try {
+                  const blob = new Blob(audioChunks, { type: mimeType });
+                  const form = new FormData();
+                  form.append('file', blob, 'recording.webm');
+
+                  const resp = await fetch('/transcribe', { method: 'POST', body: form });
+                  let payload = null;
+                  try { payload = await resp.json(); } catch(_) { payload = {}; }
+                  if (!resp.ok) {
+                    const detail = (payload && payload.detail) || `HTTP ${resp.status}`;
+                    throw new Error(detail);
+                  }
+                  const text = (payload && payload.text) || '';
+                  await showVoicePreview(text);
+                } catch (err) {
+                  setMicState('error', { message: `Transcription failed: ${err && err.message ? err.message : err}` });
+                } finally {
+                  setMicState('idle');
+                }
+                // stop all tracks
+                try { stream.getTracks().forEach(t => t.stop()); } catch(_){}
+              };
+
+              mediaRecorder.start();
+              isRecording = true;
+              recStart = Date.now();
+              setMicState('recording');
+              startTimer();
+            } catch (err) {
+              const msg = (err && err.name === 'NotAllowedError') ? 'Microphone permission denied' : 'Could not access microphone';
+              setMicState('error', { message: msg });
+              isRecording = false;
+            }
+          }
+
+          function endRecording(){
+            if (mediaRecorder && isRecording) {
+              try { mediaRecorder.stop(); } catch(_) {}
+              isRecording = false;
+            }
+          }
+
+          async function toggleRecording(){
+            if (isRecording) endRecording(); else await beginRecording();
+          }
+
+          async function showVoicePreview(text){
+            const existing = document.getElementById('voice-preview');
+            if (existing) existing.remove();
+            const card = document.createElement('div');
+            card.id = 'voice-preview';
+            card.className = 'fixed bottom-24 right-6 z-50 max-w-md w-[92vw] sm:w-md bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-4';
+            const safeText = String(text || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+            card.innerHTML = `
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                  <span class="material-symbols-outlined text-primary dark:text-blue-300 text-base">keyboard_voice</span>
+                  Voice transcription preview
+                </div>
+                <button type="button" aria-label="Close preview" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200" data-action="close">
+                  <span class="material-symbols-outlined text-base">close</span>
+                </button>
+              </div>
+              <div class="text-sm text-gray-700 dark:text-gray-200 bg-background-light dark:bg-gray-700/50 rounded-lg p-3 mb-4 max-h-40 overflow-y-auto">${safeText}</div>
+              <div class="flex justify-end gap-2">
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm" data-action="discard">Discard</button>
+                <button type="button" class="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm" data-action="insert">Insert</button>
+              </div>
+            `;
+            document.body.appendChild(card);
+            function cleanup(){ if (card && card.parentNode) card.parentNode.removeChild(card); }
+            card.addEventListener('click', (e) => {
+              const target = e.target.closest('[data-action]');
+              if (!target) return;
+              const action = target.getAttribute('data-action');
+              if (action === 'close' || action === 'discard') { cleanup(); }
+              else if (action === 'insert') {
+                if (inputEl) {
+                  const prefix = inputEl.value && !/\s$/.test(inputEl.value) ? ' ' : '';
+                  inputEl.value = (inputEl.value || '') + prefix + text;
+                  try { inputEl.dispatchEvent(new Event('input', { bubbles: true })); } catch(_){}
+                }
+                cleanup();
+              }
+            });
+          }
+
+          micBtn.addEventListener('click', (e) => { e.preventDefault(); toggleRecording(); });
+          // Keyboard shortcuts: Alt+R toggle; Esc stops if recording
+          document.addEventListener('keydown', (e) => {
+            try {
+              if (e.altKey && String(e.key || '').toLowerCase() === 'r') { e.preventDefault(); toggleRecording(); }
+              if (isRecording && e.key === 'Escape') { e.preventDefault(); endRecording(); }
+            } catch(_){}
+          });
+
+        })();

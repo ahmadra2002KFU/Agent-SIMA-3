@@ -1,4 +1,6 @@
 @echo off
+setlocal enableextensions
+
 echo ========================================
 echo AI Sima Chatbot - Setup Script
 echo ========================================
@@ -14,23 +16,34 @@ if %errorlevel% neq 0 (
 )
 
 echo Python found. Checking version...
+python -c "import sys; sys.exit(0 if (sys.version_info.major, sys.version_info.minor) >= (3,8) else 1)"
+if %errorlevel% neq 0 (
+    echo ERROR: Python 3.8 or higher is required. Please update Python from https://python.org
+    pause
+    exit /b 1
+)
+
 python -c "import sys; print(f'Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')"
 
 REM Check if we're in the correct directory
 if not exist "server\app.py" (
-    echo ERROR: Please run this script from the Agent3 project root directory
+    echo ERROR: Please run this script from the project root directory
     echo The script should be in the same folder as the 'server' directory
     pause
     exit /b 1
 )
 
 echo.
-echo Creating virtual environment...
-python -m venv .venv
-if %errorlevel% neq 0 (
-    echo ERROR: Failed to create virtual environment
-    pause
-    exit /b 1
+if exist ".venv\Scripts\activate.bat" (
+    echo Virtual environment already exists. Skipping creation.
+) else (
+    echo Creating virtual environment...
+    python -m venv .venv
+    if %errorlevel% neq 0 (
+        echo ERROR: Failed to create virtual environment
+        pause
+        exit /b 1
+    )
 )
 
 echo.
@@ -51,15 +64,15 @@ echo Installing required dependencies...
 echo This may take a few minutes...
 
 REM Install core dependencies
-pip install fastapi uvicorn[standard]
+python -m pip install fastapi uvicorn[standard] openai
 if %errorlevel% neq 0 (
-    echo ERROR: Failed to install FastAPI and Uvicorn
+    echo ERROR: Failed to install FastAPI, Uvicorn, and OpenAI
     pause
     exit /b 1
 )
 
 REM Install data processing libraries
-pip install pandas openpyxl numpy
+python -m pip install pandas openpyxl numpy
 if %errorlevel% neq 0 (
     echo ERROR: Failed to install data processing libraries
     pause
@@ -67,7 +80,7 @@ if %errorlevel% neq 0 (
 )
 
 REM Install visualization libraries
-pip install plotly
+python -m pip install plotly
 if %errorlevel% neq 0 (
     echo ERROR: Failed to install Plotly
     pause
@@ -75,7 +88,7 @@ if %errorlevel% neq 0 (
 )
 
 REM Install HTTP client libraries
-pip install aiohttp requests
+python -m pip install aiohttp requests
 if %errorlevel% neq 0 (
     echo ERROR: Failed to install HTTP client libraries
     pause
@@ -83,7 +96,7 @@ if %errorlevel% neq 0 (
 )
 
 REM Install additional utilities
-pip install aiofiles websockets python-multipart
+python -m pip install aiofiles websockets python-multipart
 if %errorlevel% neq 0 (
     echo ERROR: Failed to install additional utilities
     pause

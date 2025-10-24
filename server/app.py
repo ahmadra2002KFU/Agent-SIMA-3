@@ -14,6 +14,8 @@ from lm_studio_client import lm_client
 from file_handler import file_handler
 from code_executor import code_executor
 from rules_manager import rules_manager
+import aiohttp
+
 
 logger = logging.getLogger(__name__)
 
@@ -288,6 +290,56 @@ async def get_file_metadata() -> JSONResponse:
         "status": "success",
         "metadata": metadata
     })
+
+
+@app.post("/transcribe")
+async def transcribe_audio(file: UploadFile = File(...)) -> JSONResponse:
+    """Transcribe uploaded audio using Groq Whisper Large V3.
+
+    Reuses the existing Groq API client configuration (base URL and API key)
+    from lm_studio_client.lm_client.
+    """
+    try:
+        audio_bytes = await file.read()
+        if not audio_bytes:
+            raise HTTPException(status_code=400, detail="Empty audio file")
+
+        # Build Groq Whisper transcription request
+        url = f"{lm_client.base_url}/audio/transcriptions"
+        headers = {"Authorization": f"Bearer {lm_client.api_key}"}
+
+        form = aiohttp.FormData()
+        form.add_field("model", "whisper-large-v3")
+        form.add_field(
+            "file",
+            audio_bytes,
+            filename=file.filename or "recording.webm",
+            content_type=file.content_type or "audio/webm",
+        )
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, data=form) as resp:
+                text_body = await resp.text()
+                if resp.status >= 400:
+                    # Return upstream error details for transparency
+                    raise HTTPException(status_code=resp.status, detail=f"Groq Whisper error: {text_body[:300]}")
+                try:
+                    payload = json.loads(text_body)
+                except Exception:
+                    raise HTTPException(status_code=502, detail="Invalid response from Groq Whisper API")
+
+                transcript = payload.get("text") or payload.get("transcript") or ""
+                if not transcript:
+                    raise HTTPException(status_code=502, detail="Groq Whisper did not return transcription text")
+
+                return JSONResponse({
+                    "status": "success",
+                    "text": transcript
+                })
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
 
 
 @app.post("/execute-code")
