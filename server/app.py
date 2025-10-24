@@ -316,6 +316,11 @@ async def transcribe_audio(file: UploadFile = File(...)) -> JSONResponse:
             filename=file.filename or "recording.webm",
             content_type=file.content_type or "audio/webm",
         )
+        form.add_field("response_format", "json")  # ensure JSON response shape
+
+        # Allow language auto-detection and preserve original language by default.
+        # Do not pass a 'language' or 'translate' parameter; Groq's /audio/transcriptions
+        # auto-detects language and outputs transcription in the original language.
 
         async with aiohttp.ClientSession() as session:
             async with session.post(url, headers=headers, data=form) as resp:

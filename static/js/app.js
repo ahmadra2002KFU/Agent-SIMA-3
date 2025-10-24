@@ -1752,16 +1752,30 @@
               const stream = await permPromise;
               clearTimeout(permTimeout);
               audioChunks = [];
-              const mimeType = 'audio/webm';
-              mediaRecorder = new MediaRecorder(stream, { mimeType });
+              // Pick a supported audio mime type for widest cross-browser compatibility
+              const types = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4;codecs=mp4a.40.2','audio/mpeg'];
+              let chosenType = '';
+              if (window.MediaRecorder && typeof MediaRecorder.isTypeSupported === 'function') {
+                for (const t of types) { if (MediaRecorder.isTypeSupported(t)) { chosenType = t; break; } }
+              }
+              let options = {};
+              if (chosenType) options.mimeType = chosenType;
+              try { mediaRecorder = new MediaRecorder(stream, options); }
+              catch (e) { mediaRecorder = new MediaRecorder(stream); }
               mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) audioChunks.push(e.data); };
               mediaRecorder.onstop = async () => {
                 stopTimer();
                 setMicState('processing');
                 try {
-                  const blob = new Blob(audioChunks, { type: mimeType });
+                  if (!audioChunks || audioChunks.length === 0) { throw new Error('No audio captured'); }
+                  const blobType = chosenType || 'audio/webm';
+                  const blob = new Blob(audioChunks, { type: blobType });
                   const form = new FormData();
-                  form.append('file', blob, 'recording.webm');
+                  let filename = 'recording.webm';
+                  if (blobType.includes('mp4')) filename = 'recording.mp4';
+                  else if (blobType.includes('ogg')) filename = 'recording.ogg';
+                  else if (blobType.includes('mpeg') || blobType.includes('mp3')) filename = 'recording.mp3';
+                  form.append('file', blob, filename);
 
                   const resp = await fetch('/transcribe', { method: 'POST', body: form });
                   let payload = null;
